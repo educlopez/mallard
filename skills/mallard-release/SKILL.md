@@ -13,7 +13,7 @@ metadata:
 
 # mallard release workflow
 
-Reference for adding/updating skills, commands, and shipping releases for [mallard](https://github.com/educlopez/mallard). The tool lives at `/Users/eduardocalvolopez/Developer/Personal/duck-ai` (on Eduardo's machine).
+Reference for adding/updating skills, commands, and shipping releases for [mallard](https://github.com/educlopez/mallard). The tool lives at `/Users/eduardocalvolopez/Developer/Personal/mallard` (on Eduardo's machine).
 
 ## When to use this skill
 
