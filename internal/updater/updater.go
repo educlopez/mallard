@@ -56,6 +56,13 @@ type Options struct {
 	RepoRoot string
 	DryRun   bool
 	AgentID  string // empty = all detected
+
+	// Scope selects global (home-based) or workspace (project-local) linking.
+	// The zero value ("") is treated as global for backwards compatibility.
+	Scope agents.Scope
+	// WorkspaceRoot is the project root used in workspace scope. Ignored in
+	// global scope. Empty defaults to the current working directory.
+	WorkspaceRoot string
 }
 
 // Run executes the update flow. Pure: the caller decides how to render the Report.
@@ -83,6 +90,17 @@ func Run(opts Options) (*Report, error) {
 		return nil, err
 	}
 
+	scope := opts.Scope
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
+	ws := opts.WorkspaceRoot
+	if scope == agents.ScopeWorkspace && ws == "" {
+		if cwd, cerr := os.Getwd(); cerr == nil {
+			ws = cwd
+		}
+	}
+
 	rpt := &Report{DryRun: opts.DryRun}
 
 	var session *backup.Session
@@ -99,9 +117,9 @@ func Run(opts Options) (*Report, error) {
 		}
 		ar := AgentReport{Agent: a.ID()}
 
-		ar.Items = append(ar.Items, planFor(a, allSkills, "skills", a.SkillsDir())...)
-		ar.Items = append(ar.Items, planFor(a, allCommands, "commands", a.CommandsDir())...)
-		ar.Items = append(ar.Items, planFor(a, allAgents, "agents", a.AgentsDir())...)
+		ar.Items = append(ar.Items, planFor(a, allSkills, "skills", a.SkillsDirFor(scope, ws))...)
+		ar.Items = append(ar.Items, planFor(a, allCommands, "commands", a.CommandsDirFor(scope, ws))...)
+		ar.Items = append(ar.Items, planFor(a, allAgents, "agents", a.AgentsDirFor(scope, ws))...)
 
 		if !opts.DryRun {
 			for i := range ar.Items {

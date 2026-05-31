@@ -4,23 +4,35 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/educlopez/duck-ai/internal/agents"
 	"github.com/educlopez/duck-ai/internal/reports"
 )
 
 // DoctorArgs holds parsed flags for the doctor command.
 type DoctorArgs struct {
-	Fix bool
+	Fix   bool
+	Scope agents.Scope
 }
 
 // ParseDoctorArgs parses the doctor subcommand flags.
 func ParseDoctorArgs(args []string) (DoctorArgs, error) {
 	var out DoctorArgs
-	for _, a := range args {
-		switch a {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
 		case "--fix":
 			out.Fix = true
+		case "--scope":
+			if i+1 >= len(args) {
+				return out, fmt.Errorf("--scope requires a value")
+			}
+			sc, err := agents.ParseScope(args[i+1])
+			if err != nil {
+				return out, err
+			}
+			out.Scope = sc
+			i++
 		default:
-			return out, fmt.Errorf("unknown doctor flag %q", a)
+			return out, fmt.Errorf("unknown doctor flag %q", args[i])
 		}
 	}
 	return out, nil
@@ -30,9 +42,19 @@ func ParseDoctorArgs(args []string) (DoctorArgs, error) {
 // repairs broken/missing duck-ai-managed symlinks instead of just reporting.
 // The TUI calls reports.Doctor directly with a captured writer.
 func RunDoctor(repoRoot string, args DoctorArgs) error {
+	scope := args.Scope
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
+	ws := ""
+	if scope == agents.ScopeWorkspace {
+		if cwd, cerr := os.Getwd(); cerr == nil {
+			ws = cwd
+		}
+	}
 	if args.Fix {
-		_, err := reports.DoctorFix(os.Stdout, repoRoot)
+		_, err := reports.DoctorFix(os.Stdout, repoRoot, scope, ws)
 		return err
 	}
-	return reports.Doctor(os.Stdout, repoRoot)
+	return reports.Doctor(os.Stdout, repoRoot, scope, ws)
 }

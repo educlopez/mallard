@@ -16,8 +16,13 @@ import (
 )
 
 // Doctor writes the duck-ai doctor report to w. repoRoot is the absolute or
-// relative path to the duck-ai source repo.
-func Doctor(w io.Writer, repoRoot string) error {
+// relative path to the duck-ai source repo. scope selects global (home-based)
+// or workspace (project-local) directories; workspaceRoot is the project root
+// consulted in workspace scope.
+func Doctor(w io.Writer, repoRoot string, scope agents.Scope, workspaceRoot string) error {
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
 	absRepo, err := filepath.Abs(repoRoot)
 	if err != nil {
 		absRepo = repoRoot
@@ -25,9 +30,9 @@ func Doctor(w io.Writer, repoRoot string) error {
 
 	for _, a := range agents.All() {
 		detected := a.Detect()
-		skillsDir := a.SkillsDir()
-		commandsDir := a.CommandsDir()
-		agentsDir := a.AgentsDir()
+		skillsDir := a.SkillsDirFor(scope, workspaceRoot)
+		commandsDir := a.CommandsDirFor(scope, workspaceRoot)
+		agentsDir := a.AgentsDirFor(scope, workspaceRoot)
 
 		fmt.Fprintf(w, "\n  %s (%s)\n", a.DisplayName(), a.ID())
 		fmt.Fprintf(w, "    detected:     %s\n", yesNo(detected))
@@ -83,7 +88,10 @@ type FixResult struct {
 // It never touches real files/dirs, never touches symlinks pointing outside
 // the repo, and never removes a broken link when no matching source exists
 // (that is genuine drift the user must resolve). Returns the repairs made.
-func DoctorFix(w io.Writer, repoRoot string) ([]FixResult, error) {
+func DoctorFix(w io.Writer, repoRoot string, scope agents.Scope, workspaceRoot string) ([]FixResult, error) {
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
 	absRepo, err := filepath.Abs(repoRoot)
 	if err != nil {
 		absRepo = repoRoot
@@ -107,9 +115,9 @@ func DoctorFix(w io.Writer, repoRoot string) ([]FixResult, error) {
 		if !a.Detect() {
 			continue
 		}
-		fixes = append(fixes, fixDir(a.ID(), "skills", a.SkillsDir(), allSkills, absRepo)...)
-		fixes = append(fixes, fixDir(a.ID(), "commands", a.CommandsDir(), allCommands, absRepo)...)
-		fixes = append(fixes, fixDir(a.ID(), "agents", a.AgentsDir(), allAgents, absRepo)...)
+		fixes = append(fixes, fixDir(a.ID(), "skills", a.SkillsDirFor(scope, workspaceRoot), allSkills, absRepo)...)
+		fixes = append(fixes, fixDir(a.ID(), "commands", a.CommandsDirFor(scope, workspaceRoot), allCommands, absRepo)...)
+		fixes = append(fixes, fixDir(a.ID(), "agents", a.AgentsDirFor(scope, workspaceRoot), allAgents, absRepo)...)
 	}
 
 	if len(fixes) == 0 {

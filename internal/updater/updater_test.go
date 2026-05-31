@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/educlopez/duck-ai/internal/agents"
 	"github.com/educlopez/duck-ai/internal/skills"
 )
 
@@ -77,6 +78,10 @@ func (s stubAdapter) Detect() bool        { return true }
 func (s stubAdapter) SkillsDir() string   { return s.skillsDir }
 func (s stubAdapter) CommandsDir() string { return s.commandsDir }
 func (s stubAdapter) AgentsDir() string   { return s.agentsDir }
+
+func (s stubAdapter) SkillsDirFor(_ agents.Scope, _ string) string   { return s.skillsDir }
+func (s stubAdapter) CommandsDirFor(_ agents.Scope, _ string) string { return s.commandsDir }
+func (s stubAdapter) AgentsDirFor(_ agents.Scope, _ string) string   { return s.agentsDir }
 
 func TestPlanFor(t *testing.T) {
 	srcRoot := t.TempDir()

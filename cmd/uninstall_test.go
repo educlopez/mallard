@@ -26,6 +26,27 @@ func (f fakeAdapter) SkillsDir() string   { return f.skillsDir }
 func (f fakeAdapter) CommandsDir() string { return f.commandsDir }
 func (f fakeAdapter) AgentsDir() string   { return f.agentsDir }
 
+func (f fakeAdapter) SkillsDirFor(scope agents.Scope, ws string) string {
+	if scope == agents.ScopeWorkspace {
+		return filepath.Join(ws, ".claude", "skills")
+	}
+	return f.skillsDir
+}
+
+func (f fakeAdapter) CommandsDirFor(scope agents.Scope, ws string) string {
+	if scope == agents.ScopeWorkspace {
+		return filepath.Join(ws, ".claude", "commands")
+	}
+	return f.commandsDir
+}
+
+func (f fakeAdapter) AgentsDirFor(scope agents.Scope, ws string) string {
+	if scope == agents.ScopeWorkspace {
+		return filepath.Join(ws, ".claude", "agents")
+	}
+	return f.agentsDir
+}
+
 func mkdir(t *testing.T, path string) {
 	t.Helper()
 	if err := os.MkdirAll(path, 0o755); err != nil {
@@ -182,7 +203,7 @@ func TestUninstallAcrossAgent(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := uninstall(&buf, repo, []agents.Adapter{a}, false); err != nil {
+	if err := uninstall(&buf, repo, []agents.Adapter{a}, false, agents.ScopeGlobal, ""); err != nil {
 		t.Fatalf("uninstall: %v", err)
 	}
 
@@ -199,7 +220,7 @@ func TestUninstallAcrossAgent(t *testing.T) {
 
 func TestUninstallNoAgents(t *testing.T) {
 	var buf bytes.Buffer
-	if err := uninstall(&buf, t.TempDir(), nil, false); err != nil {
+	if err := uninstall(&buf, t.TempDir(), nil, false, agents.ScopeGlobal, ""); err != nil {
 		t.Fatalf("uninstall: %v", err)
 	}
 	if !bytes.Contains(buf.Bytes(), []byte("No agents detected")) {

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/educlopez/duck-ai/internal/agents"
 )
 
 func TestParseFrontmatter(t *testing.T) {
@@ -198,6 +200,10 @@ func (f fakeAdapter) Detect() bool        { return true }
 func (f fakeAdapter) SkillsDir() string   { return f.skillsDir }
 func (f fakeAdapter) CommandsDir() string { return f.commandsDir }
 func (f fakeAdapter) AgentsDir() string   { return f.agentsDir }
+
+func (f fakeAdapter) SkillsDirFor(_ agents.Scope, _ string) string   { return f.skillsDir }
+func (f fakeAdapter) CommandsDirFor(_ agents.Scope, _ string) string { return f.commandsDir }
+func (f fakeAdapter) AgentsDirFor(_ agents.Scope, _ string) string   { return f.agentsDir }
 
 func TestParseInstalled(t *testing.T) {
 	// Build a source repo.

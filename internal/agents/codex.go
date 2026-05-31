@@ -34,3 +34,15 @@ func (codexAdapter) SkillsDir() string {
 func (codexAdapter) CommandsDir() string { return "" }
 
 func (codexAdapter) AgentsDir() string { return "" }
+
+func (a codexAdapter) SkillsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.SkillsDir, ".codex", "skills")
+}
+
+func (a codexAdapter) CommandsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.CommandsDir)
+}
+
+func (a codexAdapter) AgentsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.AgentsDir)
+}

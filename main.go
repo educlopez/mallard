@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/educlopez/duck-ai/cmd"
+	"github.com/educlopez/duck-ai/internal/agents"
 )
 
 // version is the duck-ai release version.
@@ -105,6 +106,7 @@ func handleInstall(repoRoot string, args []string, version string) error {
 	// Parse flags
 	agentFlag := ""
 	allFlag := false
+	scope := agents.ScopeGlobal
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -117,16 +119,26 @@ func handleInstall(repoRoot string, args []string, version string) error {
 			}
 		case "--all":
 			allFlag = true
+		case "--scope":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--scope requires a value")
+			}
+			sc, err := agents.ParseScope(args[i+1])
+			if err != nil {
+				return err
+			}
+			scope = sc
+			i++
 		}
 	}
 
 	if agentFlag != "" {
-		return cmd.RunInstallAgent(repoRoot, agentFlag)
+		return cmd.RunInstallAgent(repoRoot, agentFlag, scope)
 	}
 	if allFlag {
-		return cmd.RunInstallAll(repoRoot)
+		return cmd.RunInstallAll(repoRoot, scope)
 	}
-	// Default: TUI
+	// Default: TUI (workspace scope is not offered interactively)
 	return cmd.RunInstallTUI(repoRoot, version)
 }
 
@@ -176,22 +188,27 @@ Usage:
   duck-ai install                Launch interactive TUI installer
   duck-ai install --agent NAME   Install only to NAME (claude|agents|codex|opencode)
   duck-ai install --all          Install to all detected agents non-interactively
+  duck-ai install --scope SCOPE  Link into global (default) or workspace (<cwd>/.claude) dirs
   duck-ai update                 Re-link skills/commands, backing up any conflicting files
   duck-ai update --dry-run       Show what update would change without touching disk
   duck-ai update --agent NAME    Update only NAME
   duck-ai update --yes           Skip confirmation prompts
+  duck-ai update --scope SCOPE   Operate on global (default) or workspace (<cwd>/.claude) dirs
   duck-ai update --list-backups  List backup batches under ~/.duck-ai/backups
   duck-ai update --restore TS    Restore files from backup TS (full stamp or unique prefix)
+  duck-ai update --pin-backup TS Pin backup TS so it is never pruned by the keep-latest GC
   duck-ai uninstall              Remove duck-ai-managed symlinks from all detected agents
   duck-ai uninstall --agent NAME Remove managed symlinks from NAME only
   duck-ai uninstall --all        Remove managed symlinks from all detected agents
   duck-ai uninstall --dry-run    Show what would be removed without touching disk
+  duck-ai uninstall --scope SCOPE Remove from global (default) or workspace (<cwd>/.claude) dirs
   duck-ai upgrade                Self-update the duck-ai binary to the latest release
   duck-ai upgrade --check        Report whether a newer release is available
   duck-ai upgrade --dry-run      Show what upgrade would download/replace
   duck-ai upgrade --force        Upgrade even on a dev build or non-newer release
   duck-ai doctor                 Check symlink health per detected agent
   duck-ai doctor --fix           Repair broken/missing duck-ai-managed links only
+  duck-ai doctor --scope SCOPE   Check global (default) or workspace (<cwd>/.claude) dirs
   duck-ai registry               List skills/commands with versions per agent
   duck-ai registry --source      List source entries from the repo
   duck-ai registry --json        Emit machine-readable JSON

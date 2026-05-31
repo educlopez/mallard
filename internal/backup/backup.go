@@ -1,6 +1,8 @@
 package backup
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -13,6 +15,17 @@ import (
 	"sync"
 	"time"
 )
+
+// DefaultRetentionCount is the number of unpinned backup batches the GC keeps.
+// Pinned batches are never pruned and do not count toward this limit.
+const DefaultRetentionCount = 5
+
+// pinMarker is the sentinel file written inside a batch dir to pin it.
+const pinMarker = ".pinned"
+
+// archiveName is the tar.gz snapshot written alongside the raw copies for each
+// batch. It mirrors the raw files and allows compressed round-trip restore.
+const archiveName = "archive.tar.gz"
 
 // Entry describes a single file or directory that was backed up before being
 // overwritten by duck-ai.
@@ -28,6 +41,11 @@ type Entry struct {
 type Manifest struct {
 	Timestamp time.Time `json:"timestamp"`
 	Entries   []Entry   `json:"entries"`
+	// Archive is the relative name of the tar.gz snapshot for this batch, if any.
+	Archive string `json:"archive,omitempty"`
+	// Pinned records whether the batch is pinned (never pruned). The on-disk
+	// .pinned marker file is the source of truth; this field is informational.
+	Pinned bool `json:"pinned,omitempty"`
 }
 
 // Session groups all snapshots taken under a single timestamped backup dir.
@@ -130,7 +148,15 @@ func (s *Session) Finalize() error {
 		return nil
 	}
 
-	m := Manifest{Timestamp: time.Now().UTC(), Entries: s.entries}
+	// Write a compressed tar.gz mirror of the raw backup copies. This is a
+	// best-effort companion to the raw files (which remain the primary restore
+	// source). A failure here must not lose the manifest, so it is non-fatal.
+	archive := ""
+	if err := writeSessionArchive(s.rootDir, s.entries); err == nil {
+		archive = archiveName
+	}
+
+	m := Manifest{Timestamp: time.Now().UTC(), Entries: s.entries, Archive: archive}
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal manifest: %w", err)
@@ -139,7 +165,170 @@ func (s *Session) Finalize() error {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 
-	return gcOldBackups(filepath.Dir(s.rootDir), 5)
+	return gcOldBackups(filepath.Dir(s.rootDir), DefaultRetentionCount)
+}
+
+// writeSessionArchive packs every raw backup file under rootDir (excluding the
+// manifest and the archive itself) into a single tar.gz. Paths inside the
+// archive are relative to rootDir so extraction can faithfully reproduce the
+// batch layout. Symlink-record (.symlink) files are stored verbatim like any
+// regular file.
+func writeSessionArchive(rootDir string, entries []Entry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+	f, err := os.Create(filepath.Join(rootDir, archiveName))
+	if err != nil {
+		return fmt.Errorf("create archive: %w", err)
+	}
+	defer f.Close()
+
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+
+	err = filepath.Walk(rootDir, func(path string, info os.FileInfo, werr error) error {
+		if werr != nil {
+			return werr
+		}
+		if info.IsDir() {
+			return nil
+		}
+		base := filepath.Base(path)
+		if base == archiveName || base == "manifest.json" || base == pinMarker {
+			return nil
+		}
+		// Only archive regular files (the raw copies and .symlink records).
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+		rel, rerr := filepath.Rel(rootDir, path)
+		if rerr != nil {
+			return rerr
+		}
+		data, rerr := os.ReadFile(path)
+		if rerr != nil {
+			return rerr
+		}
+		hdr := &tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     filepath.ToSlash(rel),
+			Mode:     int64(info.Mode().Perm()),
+			Size:     int64(len(data)),
+		}
+		if werr := tw.WriteHeader(hdr); werr != nil {
+			return werr
+		}
+		_, werr = tw.Write(data)
+		return werr
+	})
+	if err != nil {
+		_ = tw.Close()
+		_ = gw.Close()
+		return err
+	}
+	if err := tw.Close(); err != nil {
+		return fmt.Errorf("close tar: %w", err)
+	}
+	if err := gw.Close(); err != nil {
+		return fmt.Errorf("close gzip: %w", err)
+	}
+	return nil
+}
+
+// ExtractArchive unpacks the tar.gz batch archive at archivePath into destDir,
+// recreating the relative file layout. It rejects entries that would escape
+// destDir. Returns the absolute paths of the files written.
+func ExtractArchive(archivePath, destDir string) ([]string, error) {
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return nil, fmt.Errorf("open archive: %w", err)
+	}
+	defer f.Close()
+
+	gr, err := gzip.NewReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("gzip reader: %w", err)
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	var written []string
+	cleanBase := filepath.Clean(destDir) + string(filepath.Separator)
+	for {
+		hdr, rerr := tr.Next()
+		if rerr == io.EOF {
+			break
+		}
+		if rerr != nil {
+			return nil, fmt.Errorf("read tar entry: %w", rerr)
+		}
+		if hdr.Typeflag != tar.TypeReg {
+			continue
+		}
+		dst := filepath.Join(destDir, filepath.FromSlash(hdr.Name))
+		if !strings.HasPrefix(filepath.Clean(dst), cleanBase) {
+			return nil, fmt.Errorf("archive entry %q escapes destination", hdr.Name)
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return nil, err
+		}
+		out, oerr := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode).Perm())
+		if oerr != nil {
+			return nil, fmt.Errorf("create %q: %w", dst, oerr)
+		}
+		if _, cerr := io.Copy(out, tr); cerr != nil {
+			_ = out.Close()
+			return nil, fmt.Errorf("write %q: %w", dst, cerr)
+		}
+		if cerr := out.Close(); cerr != nil {
+			return nil, cerr
+		}
+		written = append(written, dst)
+	}
+	return written, nil
+}
+
+// SetPinned pins or unpins a backup batch identified by its full stamp
+// (directory name under BackupsRoot). A pinned batch is never pruned by the
+// keep-latest GC. Pinning writes a .pinned marker file and updates the
+// manifest's Pinned field when a manifest is present.
+func SetPinned(stamp string, pinned bool) error {
+	root, err := BackupsRoot()
+	if err != nil {
+		return err
+	}
+	dir := filepath.Join(root, stamp)
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("backup %q not found", stamp)
+	}
+
+	marker := filepath.Join(dir, pinMarker)
+	if pinned {
+		if err := os.WriteFile(marker, []byte(time.Now().UTC().Format(time.RFC3339)+"\n"), 0o644); err != nil {
+			return fmt.Errorf("write pin marker: %w", err)
+		}
+	} else {
+		if err := os.Remove(marker); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("remove pin marker: %w", err)
+		}
+	}
+
+	// Best-effort: keep the manifest's Pinned field in sync. Absence of a
+	// manifest is not an error — the marker file is authoritative.
+	if m, lerr := LoadManifest(dir); lerr == nil {
+		m.Pinned = pinned
+		if data, merr := json.MarshalIndent(m, "", "  "); merr == nil {
+			_ = os.WriteFile(filepath.Join(dir, "manifest.json"), data, 0o644)
+		}
+	}
+	return nil
+}
+
+// IsPinned reports whether the backup batch dir is pinned (has a .pinned marker).
+func IsPinned(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, pinMarker))
+	return err == nil
 }
 
 func copyFile(src, dst string) (string, error) {
@@ -216,6 +405,7 @@ type Summary struct {
 	EntryCount int
 	TotalBytes int64
 	ByAgent    map[string]int
+	Pinned     bool
 }
 
 // ListBackups returns every backup batch under ~/.duck-ai/backups, newest first.
@@ -244,7 +434,7 @@ func ListBackups() ([]Summary, error) {
 	for _, stamp := range stamps {
 		dir := filepath.Join(root, stamp)
 		m, err := LoadManifest(dir)
-		s := Summary{Timestamp: stamp, Dir: dir, ByAgent: map[string]int{}}
+		s := Summary{Timestamp: stamp, Dir: dir, ByAgent: map[string]int{}, Pinned: IsPinned(dir)}
 		if err != nil {
 			out = append(out, s)
 			continue
@@ -462,6 +652,9 @@ func copyFileWithMode(src, dst string, mode os.FileMode) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
+// gcOldBackups prunes the oldest UNPINNED backup batches, keeping at most
+// `keep` unpinned batches. Pinned batches (those with a .pinned marker) are
+// never pruned and do not count toward the limit.
 func gcOldBackups(parent string, keep int) error {
 	entries, err := os.ReadDir(parent)
 	if err != nil {
@@ -470,17 +663,21 @@ func gcOldBackups(parent string, keep int) error {
 		}
 		return err
 	}
-	var dirs []string
+	var unpinned []string
 	for _, e := range entries {
-		if e.IsDir() {
-			dirs = append(dirs, e.Name())
+		if !e.IsDir() {
+			continue
 		}
+		if IsPinned(filepath.Join(parent, e.Name())) {
+			continue // pinned — never prune, doesn't count toward keep
+		}
+		unpinned = append(unpinned, e.Name())
 	}
-	if len(dirs) <= keep {
+	if len(unpinned) <= keep {
 		return nil
 	}
-	sort.Strings(dirs)
-	for _, d := range dirs[:len(dirs)-keep] {
+	sort.Strings(unpinned)
+	for _, d := range unpinned[:len(unpinned)-keep] {
 		_ = os.RemoveAll(filepath.Join(parent, d))
 	}
 	return nil

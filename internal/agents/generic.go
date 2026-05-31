@@ -29,3 +29,15 @@ func (genericAdapter) SkillsDir() string {
 func (genericAdapter) CommandsDir() string { return "" }
 
 func (genericAdapter) AgentsDir() string { return "" }
+
+func (a genericAdapter) SkillsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.SkillsDir, ".agents", "skills")
+}
+
+func (a genericAdapter) CommandsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.CommandsDir)
+}
+
+func (a genericAdapter) AgentsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.AgentsDir)
+}

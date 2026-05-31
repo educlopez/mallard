@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/educlopez/duck-ai/internal/agents"
 	"github.com/educlopez/duck-ai/internal/backup"
 	"github.com/educlopez/duck-ai/internal/updater"
 )
@@ -19,11 +20,16 @@ type UpdateArgs struct {
 	Yes         bool
 	Restore     string
 	ListBackups bool
+	PinBackup   string
+	Scope       agents.Scope
 }
 
 func RunUpdate(repoRoot string, args UpdateArgs) error {
 	if args.ListBackups {
 		return runListBackups()
+	}
+	if args.PinBackup != "" {
+		return runPinBackup(args.PinBackup)
 	}
 	if args.Restore != "" {
 		return runRestore(args)
@@ -33,6 +39,7 @@ func RunUpdate(repoRoot string, args UpdateArgs) error {
 		RepoRoot: repoRoot,
 		DryRun:   args.DryRun,
 		AgentID:  args.AgentID,
+		Scope:    args.Scope,
 	})
 	if err != nil {
 		return err
@@ -80,13 +87,30 @@ func runListBackups() error {
 		return nil
 	}
 	for _, s := range summaries {
-		fmt.Printf("\n  %s\n", s.Timestamp)
+		pin := ""
+		if s.Pinned {
+			pin = "  [pinned]"
+		}
+		fmt.Printf("\n  %s%s\n", s.Timestamp, pin)
 		fmt.Printf("    dir:     %s\n", s.Dir)
 		fmt.Printf("    entries: %d (%s)\n", s.EntryCount, humanBytes(s.TotalBytes))
 		if len(s.ByAgent) > 0 {
 			fmt.Printf("    by agent: %s\n", formatByAgent(s.ByAgent))
 		}
 	}
+	return nil
+}
+
+func runPinBackup(prefix string) error {
+	stamp, err := backup.ResolveTimestamp(prefix)
+	if err != nil {
+		return err
+	}
+	if err := backup.SetPinned(stamp, true); err != nil {
+		return err
+	}
+	fmt.Printf("\n  Pinned backup %s — it will never be pruned by the keep-latest-%d GC.\n",
+		stamp, backup.DefaultRetentionCount)
 	return nil
 }
 
@@ -257,6 +281,22 @@ func ParseUpdateArgs(args []string) (UpdateArgs, error) {
 			i++
 		case "--list-backups":
 			out.ListBackups = true
+		case "--pin-backup":
+			if i+1 >= len(args) {
+				return out, fmt.Errorf("--pin-backup requires a value")
+			}
+			out.PinBackup = args[i+1]
+			i++
+		case "--scope":
+			if i+1 >= len(args) {
+				return out, fmt.Errorf("--scope requires a value")
+			}
+			sc, err := agents.ParseScope(args[i+1])
+			if err != nil {
+				return out, err
+			}
+			out.Scope = sc
+			i++
 		default:
 			if strings.HasPrefix(args[i], "-") {
 				_, _ = fmt.Fprintf(os.Stderr, "unknown flag %q\n", args[i])

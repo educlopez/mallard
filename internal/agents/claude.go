@@ -46,3 +46,15 @@ func (claudeAdapter) AgentsDir() string {
 	}
 	return filepath.Join(home, ".claude", "agents")
 }
+
+func (a claudeAdapter) SkillsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.SkillsDir, ".claude", "skills")
+}
+
+func (a claudeAdapter) CommandsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.CommandsDir, ".claude", "commands")
+}
+
+func (a claudeAdapter) AgentsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.AgentsDir, ".claude", "agents")
+}

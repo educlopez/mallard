@@ -283,7 +283,7 @@ func (m Model) handleWelcomeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // stat'ing under ~/.claude etc) — no goroutine / tea.Cmd needed.
 func (m Model) enterDoctor() Model {
 	var buf bytes.Buffer
-	err := reports.Doctor(&buf, m.repoRoot)
+	err := reports.Doctor(&buf, m.repoRoot, agents.ScopeGlobal, "")
 	m.scrollOutput = buf.String()
 	m.scrollOffset = 0
 	m.scrollErr = err

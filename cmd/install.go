@@ -17,7 +17,7 @@ func RunInstallTUI(repoRoot, version string) error {
 	return err
 }
 
-func RunInstallAgent(repoRoot, agentID string) error {
+func RunInstallAgent(repoRoot, agentID string, scope agents.Scope) error {
 	a, ok := agents.ByID(agentID)
 	if !ok {
 		return fmt.Errorf("unknown agent %q (supported: claude, codex, opencode, agents)", agentID)
@@ -26,19 +26,28 @@ func RunInstallAgent(repoRoot, agentID string) error {
 		fmt.Fprintf(os.Stderr, "agent %q not detected on this system\n", a.ID())
 		return nil
 	}
-	return installToAgents(repoRoot, []agents.Adapter{a})
+	return installToAgents(repoRoot, []agents.Adapter{a}, scope)
 }
 
-func RunInstallAll(repoRoot string) error {
+func RunInstallAll(repoRoot string, scope agents.Scope) error {
 	detected := agents.Detected()
 	if len(detected) == 0 {
 		fmt.Fprintln(os.Stderr, "No agents detected.")
 		return nil
 	}
-	return installToAgents(repoRoot, detected)
+	return installToAgents(repoRoot, detected, scope)
 }
 
-func installToAgents(repoRoot string, adapters []agents.Adapter) error {
+func installToAgents(repoRoot string, adapters []agents.Adapter, scope agents.Scope) error {
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
+	ws := ""
+	if scope == agents.ScopeWorkspace {
+		if cwd, cerr := os.Getwd(); cerr == nil {
+			ws = cwd
+		}
+	}
 	allSkills, err := skills.DiscoverSkills(repoRoot)
 	if err != nil {
 		return err
@@ -62,7 +71,7 @@ func installToAgents(repoRoot string, adapters []agents.Adapter) error {
 			continue
 		}
 
-		skillsDir := a.SkillsDir()
+		skillsDir := a.SkillsDirFor(scope, ws)
 		if skillsDir == "" {
 			fmt.Printf("    -  no skills dir resolved, skipping\n")
 		} else {
@@ -82,7 +91,7 @@ func installToAgents(repoRoot string, adapters []agents.Adapter) error {
 			}
 		}
 
-		commandsDir := a.CommandsDir()
+		commandsDir := a.CommandsDirFor(scope, ws)
 		if commandsDir != "" {
 			for _, c := range allCommands {
 				r := skills.Link(a.ID(), c, commandsDir)
@@ -100,7 +109,7 @@ func installToAgents(repoRoot string, adapters []agents.Adapter) error {
 			}
 		}
 
-		agentsDir := a.AgentsDir()
+		agentsDir := a.AgentsDirFor(scope, ws)
 		if agentsDir != "" {
 			for _, ag := range allAgents {
 				r := skills.Link(a.ID(), ag, agentsDir)

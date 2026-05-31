@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/educlopez/duck-ai/internal/agents"
 	"github.com/educlopez/duck-ai/internal/skills"
 )
 
@@ -169,7 +170,7 @@ func TestDoctorFixSmoke(t *testing.T) {
 	repo := t.TempDir()
 	mkdir(t, filepath.Join(repo, "skills"))
 	var buf bytes.Buffer
-	if _, err := DoctorFix(&buf, repo); err != nil {
+	if _, err := DoctorFix(&buf, repo, agents.ScopeGlobal, ""); err != nil {
 		t.Fatalf("DoctorFix() error = %v", err)
 	}
 	if buf.Len() == 0 {

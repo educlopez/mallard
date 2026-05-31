@@ -53,6 +53,81 @@ func TestByID(t *testing.T) {
 	}
 }
 
+func TestParseScope(t *testing.T) {
+	tests := []struct {
+		in      string
+		want    Scope
+		wantErr bool
+	}{
+		{in: "", want: ScopeGlobal},
+		{in: "global", want: ScopeGlobal},
+		{in: "workspace", want: ScopeWorkspace},
+		{in: "nope", wantErr: true},
+	}
+	for _, tt := range tests {
+		got, err := ParseScope(tt.in)
+		if tt.wantErr {
+			if err == nil {
+				t.Fatalf("ParseScope(%q) err = nil, want error", tt.in)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("ParseScope(%q) err = %v", tt.in, err)
+		}
+		if got != tt.want {
+			t.Fatalf("ParseScope(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+// TestScopeDirResolution verifies workspace scope yields project-local
+// .claude dirs and global scope is byte-identical to the legacy methods.
+func TestScopeDirResolution(t *testing.T) {
+	a, ok := ByID(IDClaude)
+	if !ok {
+		t.Fatal("claude adapter missing")
+	}
+	ws := t.TempDir()
+
+	// Workspace scope → <ws>/.claude/{skills,commands,agents}.
+	if got, want := a.SkillsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".claude", "skills"); got != want {
+		t.Fatalf("workspace SkillsDirFor = %q, want %q", got, want)
+	}
+	if got, want := a.CommandsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".claude", "commands"); got != want {
+		t.Fatalf("workspace CommandsDirFor = %q, want %q", got, want)
+	}
+	if got, want := a.AgentsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".claude", "agents"); got != want {
+		t.Fatalf("workspace AgentsDirFor = %q, want %q", got, want)
+	}
+
+	// Global scope must equal the legacy home-based methods exactly.
+	if got, want := a.SkillsDirFor(ScopeGlobal, ws), a.SkillsDir(); got != want {
+		t.Fatalf("global SkillsDirFor = %q, want %q (must equal SkillsDir())", got, want)
+	}
+	if got, want := a.CommandsDirFor(ScopeGlobal, ws), a.CommandsDir(); got != want {
+		t.Fatalf("global CommandsDirFor = %q, want %q", got, want)
+	}
+}
+
+// TestWorkspaceScopeSkipsAgentsWithoutLocation ensures agents whose global dir
+// is empty also yield empty workspace dirs (skipped consistently).
+func TestWorkspaceScopeSkipsAgentsWithoutLocation(t *testing.T) {
+	ws := t.TempDir()
+	codex, _ := ByID(IDCodex)
+	// Codex has no commands/agents dir globally; workspace must also be empty.
+	if got := codex.CommandsDirFor(ScopeWorkspace, ws); got != "" {
+		t.Fatalf("codex workspace CommandsDirFor = %q, want empty", got)
+	}
+	if got := codex.AgentsDirFor(ScopeWorkspace, ws); got != "" {
+		t.Fatalf("codex workspace AgentsDirFor = %q, want empty", got)
+	}
+	// But codex DOES have a skills dir, so workspace resolves it.
+	if got, want := codex.SkillsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".codex", "skills"); got != want {
+		t.Fatalf("codex workspace SkillsDirFor = %q, want %q", got, want)
+	}
+}
+
 func TestAllReturnsCopy(t *testing.T) {
 	got := All()
 	if len(got) != len(all) {

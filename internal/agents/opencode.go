@@ -40,3 +40,15 @@ func (openCodeAdapter) CommandsDir() string {
 }
 
 func (openCodeAdapter) AgentsDir() string { return "" }
+
+func (a openCodeAdapter) SkillsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.SkillsDir, ".opencode", "skills")
+}
+
+func (a openCodeAdapter) CommandsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.CommandsDir, ".opencode", "commands")
+}
+
+func (a openCodeAdapter) AgentsDirFor(scope Scope, ws string) string {
+	return scopedDir(scope, ws, a.AgentsDir)
+}

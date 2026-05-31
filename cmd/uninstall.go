@@ -15,6 +15,7 @@ type UninstallArgs struct {
 	AgentID string
 	All     bool
 	DryRun  bool
+	Scope   agents.Scope
 }
 
 // ParseUninstallArgs parses the uninstall subcommand flags.
@@ -38,6 +39,16 @@ func ParseUninstallArgs(args []string) (UninstallArgs, error) {
 			out.All = true
 		case "--dry-run":
 			out.DryRun = true
+		case "--scope":
+			if i+1 >= len(args) {
+				return out, fmt.Errorf("--scope requires a value")
+			}
+			sc, err := agents.ParseScope(args[i+1])
+			if err != nil {
+				return out, err
+			}
+			out.Scope = sc
+			i++
 		default:
 			return out, fmt.Errorf("unknown uninstall flag %q", args[i])
 		}
@@ -59,7 +70,17 @@ func RunUninstall(repoRoot string, args UninstallArgs) error {
 	if err != nil {
 		return err
 	}
-	return uninstall(os.Stdout, repoRoot, adapters, args.DryRun)
+	scope := args.Scope
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
+	ws := ""
+	if scope == agents.ScopeWorkspace {
+		if cwd, cerr := os.Getwd(); cerr == nil {
+			ws = cwd
+		}
+	}
+	return uninstall(os.Stdout, repoRoot, adapters, args.DryRun, scope, ws)
 }
 
 // selectUninstallAgents resolves which adapters to operate on from the parsed
@@ -80,7 +101,10 @@ func selectUninstallAgents(args UninstallArgs) ([]agents.Adapter, error) {
 // uninstall is the pure-ish core: it removes managed symlinks across the given
 // adapters and writes a per-agent summary to w. With dryRun set it changes
 // nothing on disk and only reports what it would remove.
-func uninstall(w io.Writer, repoRoot string, adapters []agents.Adapter, dryRun bool) error {
+func uninstall(w io.Writer, repoRoot string, adapters []agents.Adapter, dryRun bool, scope agents.Scope, workspaceRoot string) error {
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
 	absRepo, err := filepath.Abs(repoRoot)
 	if err != nil {
 		absRepo = repoRoot
@@ -106,7 +130,11 @@ func uninstall(w io.Writer, repoRoot string, adapters []agents.Adapter, dryRun b
 		}
 
 		removed, skipped := 0, 0
-		for _, dir := range []string{a.SkillsDir(), a.CommandsDir(), a.AgentsDir()} {
+		for _, dir := range []string{
+			a.SkillsDirFor(scope, workspaceRoot),
+			a.CommandsDirFor(scope, workspaceRoot),
+			a.AgentsDirFor(scope, workspaceRoot),
+		} {
 			r, s := unlinkManagedInDir(w, dir, absRepo, dryRun)
 			removed += r
 			skipped += s
