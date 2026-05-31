@@ -16,7 +16,24 @@ Built for day-to-day work at **Cinetic** (soon Neven).
 
 ## Install
 
-### macOS / Linux
+### macOS / Linux (Homebrew)
+
+```bash
+brew install educlopez/tap/duck-ai
+```
+
+Upgrade later with `brew upgrade duck-ai`.
+
+### Windows (Scoop)
+
+```powershell
+scoop bucket add educlopez https://github.com/educlopez/scoop-bucket
+scoop install duck-ai
+```
+
+Upgrade later with `scoop update duck-ai`.
+
+### macOS / Linux (curl installer)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
@@ -30,15 +47,9 @@ Pin a specific version:
 DUCK_AI_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
 ```
 
-### Windows
+### Windows (manual)
 
-The installer is bash-only. Two options:
-
-**Option A — download the release zip directly**:
-
-Grab the latest zip from [Releases](https://github.com/educlopez/duck-ai/releases) (`duck-ai_<version>_windows_amd64.zip` or `_arm64.zip`), extract it, and move `duck-ai.exe` somewhere on your `PATH`.
-
-**Option B — WSL / Git Bash** — run the macOS / Linux install command above.
+Grab the latest zip from [Releases](https://github.com/educlopez/duck-ai/releases) (`duck-ai_<version>_windows_amd64.zip` or `_arm64.zip`), extract it, and move `duck-ai.exe` somewhere on your `PATH`. Or use WSL / Git Bash with the curl installer above.
 
 ### After install
 

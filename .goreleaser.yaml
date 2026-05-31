@@ -62,7 +62,25 @@ release:
   draft: false
   prerelease: auto
 
-# Homebrew and Scoop publishing intentionally disabled: both require the
-# release tarball download to be authenticated, and neither tool authenticates
-# the direct release/download URL (only the API and the tap clone). For a
-# private repo, the canonical install path is the curl-pipe installer.
+brews:
+  - repository:
+      owner: educlopez
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    name: duck-ai
+    homepage: "https://github.com/educlopez/duck-ai"
+    description: "Personal Claude Code toolkit — PrestaShop/Lando/Cinetic skills, commands, and agents."
+    license: "MIT"
+    commit_msg_template: "chore: update duck-ai formula to {{ .Tag }}"
+
+scoops:
+  - repository:
+      owner: educlopez
+      name: scoop-bucket
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    name: duck-ai
+    homepage: "https://github.com/educlopez/duck-ai"
+    description: "Personal Claude Code toolkit — PrestaShop/Lando/Cinetic skills, commands, and agents."
+    license: MIT
+    commit_msg_template: "chore: update duck-ai to {{ .Tag }}"
