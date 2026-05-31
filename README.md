@@ -9,7 +9,10 @@ Built for day-to-day work at **Cinetic** (soon Neven).
 |------|------|
 | [ps-lando](http://ps-lando.educalvolopez.com/) | CLI to scaffold a Lando environment with PrestaShop + Panda theme |
 
-> **Note**: `prestashop-experts` (the PrestaShop/Panda expert agents + knowledge base) has been **merged into duck-ai** — see the [Agents](#agents) section below. The standalone plugin is deprecated.
+> **Note**: the PrestaShop/Panda expert agents + knowledge base from
+> [prestashop-experts](https://github.com/educlopez/prestashop-experts) are also bundled
+> here — see the [Agents](#agents) section below. The standalone plugin stays available
+> for external/freelance use; duck-ai is the team distribution.
 
 ## Install
 
@@ -115,8 +118,9 @@ Claude Code subagents, symlinked to `~/.claude/agents/` (Claude only). Both are 
 | `panda-expert` | Panda theme by SunnyToo, `st*` modules, Easy Builder, SunnyToo demos |
 | `prestashop-expert` | PrestaShop 8/9 core: themes, parent-child, Symfony BO, Twig, Smarty, hooks, modules, migration 8→9 |
 
-The knowledge base under `skills/panda-kb/references/` and `skills/prestashop-kb/references/`
-is synced from Eduardo's Obsidian vault via `scripts/sync-from-vault.sh`.
+The knowledge base lives in-repo under `skills/panda-kb/references/` and
+`skills/prestashop-kb/references/` — that's the source of truth. Edit it directly; no
+external vault or per-machine setup is required to build or ship the KB.
 
 ## Structure
 
@@ -146,7 +150,6 @@ internal/
 skills/                       Claude Code skills (symlinked to ~/.claude/skills/)
 claude/commands/              Slash commands (symlinked to ~/.claude/commands/)
 claude/agents/                Claude subagents (symlinked to ~/.claude/agents/, Claude only)
-scripts/sync-from-vault.sh    Sync panda-kb/prestashop-kb references from the Obsidian vault
 .github/workflows/
   release.yml                 Tag push → goreleaser → binaries + brew + scoop
   ci.yml                      go vet + go build on push/PR
