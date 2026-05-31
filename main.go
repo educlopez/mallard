@@ -55,6 +55,28 @@ func main() {
 			os.Exit(1)
 		}
 
+	case "uninstall":
+		unargs, err := cmd.ParseUninstallArgs(args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if err := cmd.RunUninstall(repoRoot, unargs); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+	case "upgrade":
+		upargs, err := cmd.ParseUpgradeArgs(args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if err := cmd.RunUpgrade(version, upargs); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
 	case "registry":
 		rargs, err := cmd.ParseRegistryArgs(args[1:])
 		if err != nil {
@@ -160,6 +182,14 @@ Usage:
   duck-ai update --yes           Skip confirmation prompts
   duck-ai update --list-backups  List backup batches under ~/.duck-ai/backups
   duck-ai update --restore TS    Restore files from backup TS (full stamp or unique prefix)
+  duck-ai uninstall              Remove duck-ai-managed symlinks from all detected agents
+  duck-ai uninstall --agent NAME Remove managed symlinks from NAME only
+  duck-ai uninstall --all        Remove managed symlinks from all detected agents
+  duck-ai uninstall --dry-run    Show what would be removed without touching disk
+  duck-ai upgrade                Self-update the duck-ai binary to the latest release
+  duck-ai upgrade --check        Report whether a newer release is available
+  duck-ai upgrade --dry-run      Show what upgrade would download/replace
+  duck-ai upgrade --force        Upgrade even on a dev build or non-newer release
   duck-ai doctor                 Check symlink health per detected agent
   duck-ai doctor --fix           Repair broken/missing duck-ai-managed links only
   duck-ai registry               List skills/commands with versions per agent
@@ -168,6 +198,7 @@ Usage:
   duck-ai version                Print version
 
 Environment:
-  DUCK_AI_DIR   Override repo root (defaults to binary location)
+  DUCK_AI_DIR              Override repo root (defaults to binary location)
+  DUCK_AI_NO_SELF_UPDATE   Set to 1 to disable 'duck-ai upgrade' self-replace
 `)
 }
