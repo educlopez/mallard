@@ -106,7 +106,7 @@ func Registry(w io.Writer, repoRoot string, args RegistryArgs) error {
 
 func printSourceText(w io.Writer, source []skillregistry.Manifest) error {
 	fmt.Fprintln(w, "\n  duck-ai registry — source")
-	skills, commands := splitByKind(source)
+	skills, commands, agentDefs := splitByKind(source)
 	if len(skills) > 0 {
 		fmt.Fprintln(w, "    skills:")
 		for _, m := range skills {
@@ -116,6 +116,12 @@ func printSourceText(w io.Writer, source []skillregistry.Manifest) error {
 	if len(commands) > 0 {
 		fmt.Fprintln(w, "    commands:")
 		for _, m := range commands {
+			fmt.Fprintf(w, "      %-32s %s\n", m.Name, versionLabel(m.Version))
+		}
+	}
+	if len(agentDefs) > 0 {
+		fmt.Fprintln(w, "    agents:")
+		for _, m := range agentDefs {
 			fmt.Fprintf(w, "      %-32s %s\n", m.Name, versionLabel(m.Version))
 		}
 	}
@@ -136,8 +142,8 @@ func printInstalledText(w io.Writer, sourceVersions map[string]string, installed
 			continue
 		}
 		fmt.Fprintf(w, "\n  Agent: %s\n", a.ID())
-		skills, commands := splitByKind(ms)
-		if len(skills) == 0 && len(commands) == 0 {
+		skills, commands, agentDefs := splitByKind(ms)
+		if len(skills) == 0 && len(commands) == 0 && len(agentDefs) == 0 {
 			fmt.Fprintln(w, "    (none managed)")
 			continue
 		}
@@ -155,17 +161,26 @@ func printInstalledText(w io.Writer, sourceVersions map[string]string, installed
 					m.Name, versionLabel(m.Version), statusFor(m, sourceVersions))
 			}
 		}
+		if len(agentDefs) > 0 {
+			fmt.Fprintln(w, "    agents:")
+			for _, m := range agentDefs {
+				fmt.Fprintf(w, "      %-32s %-8s %s\n",
+					m.Name, versionLabel(m.Version), statusFor(m, sourceVersions))
+			}
+		}
 	}
 	return nil
 }
 
-func splitByKind(ms []skillregistry.Manifest) (skills, commands []skillregistry.Manifest) {
+func splitByKind(ms []skillregistry.Manifest) (skills, commands, agentDefs []skillregistry.Manifest) {
 	for _, m := range ms {
 		switch m.Kind {
 		case "skill":
 			skills = append(skills, m)
 		case "command":
 			commands = append(commands, m)
+		case "agent":
+			agentDefs = append(agentDefs, m)
 		}
 	}
 	return

@@ -38,3 +38,11 @@ func (claudeAdapter) CommandsDir() string {
 	}
 	return filepath.Join(home, ".claude", "commands")
 }
+
+func (claudeAdapter) AgentsDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".claude", "agents")
+}

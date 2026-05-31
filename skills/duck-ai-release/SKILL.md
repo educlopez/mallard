@@ -20,7 +20,7 @@ Reference for adding/updating skills, commands, and shipping releases for [duck-
 - "How do I add a skill to duck-ai?"
 - "Release a new version of duck-ai" / "ship duck-ai" / "tag duck-ai vX.Y.Z"
 - "Update duck-ai" / "bump the duck-ai version"
-- Anything that involves editing files under `skills/`, `claude/commands/`, or shipping the change to other team members.
+- Anything that involves editing files under `skills/`, `claude/commands/`, `claude/agents/`, or shipping the change to other team members.
 
 ## TL;DR
 
@@ -85,7 +85,28 @@ duck-ai update
 3. Locally: `./duck-ai update`.
 4. Skip to **Shipping a release** below.
 
-## Bumping an existing skill or command
+## Adding a new agent
+
+Agents are Claude Code subagents. They symlink to `~/.claude/agents/` and are **Claude-only**
+(codex/opencode/generic adapters return an empty agents dir and skip them).
+
+1. Create `claude/agents/<agent-name>.md` with frontmatter:
+   ```yaml
+   ---
+   name: <agent-name>
+   description: When Claude should route to this agent.
+   tools: Read, Grep, Glob, Bash
+   model: sonnet
+   color: orange
+   version: "0.1.0"
+   ---
+   ```
+2. Body: the agent's system prompt. Optionally add a `/<name>` command in `claude/commands/`
+   to invoke it explicitly.
+3. Locally: `./duck-ai update` — the symlink appears in `~/.claude/agents/<agent-name>.md`.
+4. Skip to **Shipping a release** below.
+
+## Bumping an existing skill, command, or agent
 
 1. Edit the file.
 2. Bump `version:` in the frontmatter. Semver guidance:

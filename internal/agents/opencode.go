@@ -38,3 +38,5 @@ func (openCodeAdapter) CommandsDir() string {
 	}
 	return filepath.Join(home, ".config", "opencode", "commands")
 }
+
+func (openCodeAdapter) AgentsDir() string { return "" }

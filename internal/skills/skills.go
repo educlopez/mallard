@@ -69,6 +69,30 @@ func DiscoverCommands(repoRoot string) ([]Skill, error) {
 	return commands, nil
 }
 
+// DiscoverAgents scans claude/agents/*.md and returns all agents.
+func DiscoverAgents(repoRoot string) ([]Skill, error) {
+	agentsDir := filepath.Join(repoRoot, "claude", "agents")
+	entries, err := os.ReadDir(agentsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("reading agents dir %s: %w", agentsDir, err)
+	}
+
+	var agents []Skill
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".md" {
+			continue
+		}
+		agents = append(agents, Skill{
+			Name:    e.Name(),
+			SrcPath: filepath.Join(agentsDir, e.Name()),
+		})
+	}
+	return agents, nil
+}
+
 // Link creates a symlink at dstDir/skill.Name → skill.SrcPath.
 // Returns a LinkResult describing the outcome.
 func Link(agentName string, skill Skill, dstDir string) LinkResult {

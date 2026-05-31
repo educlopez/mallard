@@ -1,0 +1,150 @@
+---
+source_url: https://devdocs.prestashop-project.org/9/themes/reference/overriding-modules/
+ps_version: [8, 9]
+ingested: 2026-04-18
+section: Themes > Overriding modules from a theme
+topic: themes
+tags: [prestashop, themes, modules, override]
+---
+
+[Improve this page](https://github.com/PrestaShop/docs/edit/9.x/themes/reference/overriding-modules.md "Improve this page") [How](/9/contribute/documentation/how)
+
+When you write a theme, you often need to override the templates and assets coming from a module so that they match your theme’s specific markup needs. Themes can override modules’ assets (CSS and JavaScript only) by placing the corresponding file at a specific location.
+
+All module overriding code goes to the `modules` directory (in your module’s own directory).
+
+If your asset override is empty, PrestaShop will load nothing (neither the module one nor your override). This is useful if you want to fully remove this module style and add your own to your compiled `theme.css`.
+
+Examples in this page are based on this sample module directory structure:
+
+```fallback
+.
+
+├── css
+
+│   ├── external-lib.css
+
+│   └── style.css
+
+├── js
+
+│   └── app.js
+
+├── moduledemo.php
+
+└── views
+
+    └── templates
+
+        └── front
+
+            ├── included-template.tpl
+
+            └── moduledemo.tpl
+
+5 directories, 6 files
+```
+
+## Overriding templates and assets
+
+Here are the folder paths to create in order to override templates and assets:
+
+```fallback
+.
+
+└── modules
+
+    ├── css
+
+    │   ├── external-lib.css
+
+    │   └── style.css
+
+    ├── js
+
+    │   └── app.js
+
+    └── views
+
+        └── templates
+
+            └── front
+
+                ├── included-template.tpl
+
+                └── moduledemo.tpl
+
+6 directories, 5 files
+```
+
+Compared to what was needed in PrestaShop 1.6, it is much simpler:
+
+```fallback
+.
+
+├── css
+
+│   └── modules
+
+│       └── css
+
+│           ├── external-lib.css
+
+│           └── style.css
+
+├── js
+
+│   └── modules
+
+│       └── js
+
+│           └── app.js
+
+└── modules
+
+    └── views
+
+        └── templates
+
+            └── front
+
+                ├── included-template.tpl
+
+                └── moduledemo.tpl
+
+10 directories, 5 files
+```
+
+## Overriding with the ‘include’ method
+
+There is one very important issue that you should be aware of. When loading a template file (for instance ‘moduledemo.tpl’), PrestaShop will look for overriding first, in the following order:
+
+1. /themes/THEME\_NAME/modules/MODULE\_NAME/views/templates/front/moduledemo.tpl
+2. /modules/MODULE\_NAME/views/templates/front/moduledemo.tpl
+
+But if your `moduledemo.tpl` file includes the `included-template.tpl` file, you will have to override ‘included-template.tpl’ as well, even if you don’t want to modify it (nor to edit the path). This means that every file that an overridden file includes needs to be copy-pasted as-is in order for your override to work properly.
+
+The issue goes both ways: if you want to modify the `included-template.tpl` file, you will have to override the `moduledemo.tpl` file that includes it.
+
+```smarty
+{include file='./included-template.tpl'}
+```
+
+PrestaShop 1.7 introduced a way to include files in module templates. By using this method, all the expected rules will be followed:
+
+```smarty
+{include file='module:MODULE_NAME/views/templates/front/included-template.tpl'}
+```
+
+## SmartyDev helps you debug!
+
+PrestaShop 1.7 also introduced our own SmartyDev tool, a Smarty extension which allows you to see the template’s name within your generated HTML markup. This will help debugging a lot, especially because of template override.
+
+Here an example of generated markup with SmartyDev activated:
+
+To use it, simply set the `_PS_MODE_DEV_` constant to `true` in your installation’s `/config/defines.inc.php` file: add the `define('_PS_MODE_DEV_', true);` line to that file in order to turn the PrestaShop Developer Mode on, which features SmartyDev.
+
+## Related in KB
+
+- [[../modules/overrides|Module overrides]]
+- [[templates|Templates reference]]

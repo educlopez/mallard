@@ -78,6 +78,10 @@ func Run(opts Options) (*Report, error) {
 	if err != nil {
 		return nil, err
 	}
+	allAgents, err := skills.DiscoverAgents(absRepo)
+	if err != nil {
+		return nil, err
+	}
 
 	rpt := &Report{DryRun: opts.DryRun}
 
@@ -97,6 +101,7 @@ func Run(opts Options) (*Report, error) {
 
 		ar.Items = append(ar.Items, planFor(a, allSkills, "skills", a.SkillsDir())...)
 		ar.Items = append(ar.Items, planFor(a, allCommands, "commands", a.CommandsDir())...)
+		ar.Items = append(ar.Items, planFor(a, allAgents, "agents", a.AgentsDir())...)
 
 		if !opts.DryRun {
 			for i := range ar.Items {

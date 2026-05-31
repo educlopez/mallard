@@ -16,7 +16,7 @@ type Manifest struct {
 	Description string `json:"description,omitempty"`
 	Version     string `json:"version,omitempty"`
 	Path        string `json:"path"`
-	Kind        string `json:"kind"` // "skill" or "command"
+	Kind        string `json:"kind"` // "skill", "command" or "agent"
 }
 
 // ParseSource walks the duck-ai repo and returns one Manifest per source
@@ -64,6 +64,26 @@ func ParseSource(repoRoot string) ([]Manifest, error) {
 		out = append(out, m)
 	}
 
+	agentsDir := filepath.Join(repoRoot, "claude", "agents")
+	agentEntries, err := os.ReadDir(agentsDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("read agents dir: %w", err)
+	}
+	for _, e := range agentEntries {
+		if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		if !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		name := strings.TrimSuffix(e.Name(), ".md")
+		m, err := parseFile(filepath.Join(agentsDir, e.Name()), "agent", name)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+
 	sortManifests(out)
 	return out, nil
 }
@@ -86,6 +106,15 @@ func ParseInstalled(adapter agents.Adapter) ([]Manifest, error) {
 	commandsDir := adapter.CommandsDir()
 	if commandsDir != "" {
 		ms, err := walkInstalledDir(commandsDir, "command")
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ms...)
+	}
+
+	agentsDir := adapter.AgentsDir()
+	if agentsDir != "" {
+		ms, err := walkInstalledDir(agentsDir, "agent")
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +161,7 @@ func walkInstalledDir(dir, kind string) ([]Manifest, error) {
 		case "skill":
 			manifestPath = filepath.Join(target, "SKILL.md")
 			displayName = name
-		case "command":
+		case "command", "agent":
 			manifestPath = target
 			displayName = strings.TrimSuffix(name, ".md")
 		}

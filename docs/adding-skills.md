@@ -41,6 +41,26 @@
    ```
 3. Available in Claude Code as `/<command-name>` after running `duck-ai update`.
 
+## Adding an agent
+
+Agents are Claude Code subagents, symlinked to `~/.claude/agents/` (Claude only —
+codex/opencode/generic adapters skip them, since the format is Claude-specific).
+
+1. Create `claude/agents/<agent-name>.md`
+2. Frontmatter required:
+   ```yaml
+   ---
+   name: agent-name
+   description: When to invoke this agent (Claude routes to it based on this).
+   tools: Read, Grep, Glob, Bash
+   model: sonnet
+   color: orange
+   version: "0.1.0"
+   ---
+   ```
+3. Available as a subagent after `duck-ai update`. A companion `/<name>` command in
+   `claude/commands/` is the usual way to invoke it explicitly.
+
 ## Skill scope
 
 | Scope | Where |

@@ -47,6 +47,10 @@ func installToAgents(repoRoot string, adapters []agents.Adapter) error {
 	if err != nil {
 		return err
 	}
+	allAgents, err := skills.DiscoverAgents(repoRoot)
+	if err != nil {
+		return err
+	}
 
 	linked, already, errored, skipped := 0, 0, 0, 0
 
@@ -82,6 +86,24 @@ func installToAgents(repoRoot string, adapters []agents.Adapter) error {
 		if commandsDir != "" {
 			for _, c := range allCommands {
 				r := skills.Link(a.ID(), c, commandsDir)
+				printResult(r)
+				switch r.Status {
+				case "linked":
+					linked++
+				case "already_linked":
+					already++
+				case "error":
+					errored++
+				case "skipped":
+					skipped++
+				}
+			}
+		}
+
+		agentsDir := a.AgentsDir()
+		if agentsDir != "" {
+			for _, ag := range allAgents {
+				r := skills.Link(a.ID(), ag, agentsDir)
 				printResult(r)
 				switch r.Status {
 				case "linked":

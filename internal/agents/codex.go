@@ -32,3 +32,5 @@ func (codexAdapter) SkillsDir() string {
 }
 
 func (codexAdapter) CommandsDir() string { return "" }
+
+func (codexAdapter) AgentsDir() string { return "" }

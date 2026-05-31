@@ -49,6 +49,7 @@ type Model struct {
 	// Skills screen
 	allSkills     []skills.Skill
 	allCommands   []skills.Skill
+	allAgentDefs  []skills.Skill
 	skillSelected []bool
 	skillCursor   int
 
@@ -405,8 +406,14 @@ func (m Model) loadSkillsScreen() (tea.Model, tea.Cmd) {
 		m.err = err
 		return m, tea.Quit
 	}
+	ag, err := skills.DiscoverAgents(m.repoRoot)
+	if err != nil {
+		m.err = err
+		return m, tea.Quit
+	}
 	m.allSkills = s
 	m.allCommands = c
+	m.allAgentDefs = ag
 	m.skillSelected = make([]bool, len(s))
 	for i := range m.skillSelected {
 		m.skillSelected[i] = true
@@ -482,6 +489,13 @@ func (m Model) runInstall() tea.Cmd {
 			if commandsDir != "" {
 				for _, cmd := range m.allCommands {
 					r := skills.Link(agent.ID(), cmd, commandsDir)
+					results = append(results, r)
+				}
+			}
+			agentsDir := agent.AgentsDir()
+			if agentsDir != "" {
+				for _, def := range m.allAgentDefs {
+					r := skills.Link(agent.ID(), def, agentsDir)
 					results = append(results, r)
 				}
 			}
@@ -588,6 +602,13 @@ func (m Model) viewSkills() string {
 		b.WriteString("\n" + styleAccent.Render("  Commands (always installed)\n"))
 		for _, c := range m.allCommands {
 			b.WriteString(styleMuted.Render(fmt.Sprintf("    • %s", c.Name)) + "\n")
+		}
+	}
+
+	if len(m.allAgentDefs) > 0 {
+		b.WriteString("\n" + styleAccent.Render("  Agents (always installed, Claude only)\n"))
+		for _, ag := range m.allAgentDefs {
+			b.WriteString(styleMuted.Render(fmt.Sprintf("    • %s", ag.Name)) + "\n")
 		}
 	}
 

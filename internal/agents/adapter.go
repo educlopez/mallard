@@ -13,4 +13,5 @@ type Adapter interface {
 	Detect() bool
 	SkillsDir() string
 	CommandsDir() string
+	AgentsDir() string
 }

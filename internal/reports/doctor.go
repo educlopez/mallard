@@ -26,11 +26,13 @@ func Doctor(w io.Writer, repoRoot string) error {
 		detected := a.Detect()
 		skillsDir := a.SkillsDir()
 		commandsDir := a.CommandsDir()
+		agentsDir := a.AgentsDir()
 
 		fmt.Fprintf(w, "\n  %s (%s)\n", a.DisplayName(), a.ID())
 		fmt.Fprintf(w, "    detected:     %s\n", yesNo(detected))
 		fmt.Fprintf(w, "    skills dir:   %s\n", displayPath(skillsDir))
 		fmt.Fprintf(w, "    commands dir: %s\n", displayPath(commandsDir))
+		fmt.Fprintf(w, "    agents dir:   %s\n", displayPath(agentsDir))
 
 		if !detected {
 			continue
@@ -38,11 +40,13 @@ func Doctor(w io.Writer, repoRoot string) error {
 
 		skillsManaged, skillsUnmanaged := scanDir(skillsDir, absRepo)
 		commandsManaged, commandsUnmanaged := scanDir(commandsDir, absRepo)
-		managed := skillsManaged + commandsManaged
+		agentsManaged, agentsUnmanaged := scanDir(agentsDir, absRepo)
+		managed := skillsManaged + commandsManaged + agentsManaged
 		fmt.Fprintf(w, "    managed:      %d duck-ai symlinks\n", managed)
 
 		unmanaged := append([]driftEntry{}, skillsUnmanaged...)
 		unmanaged = append(unmanaged, commandsUnmanaged...)
+		unmanaged = append(unmanaged, agentsUnmanaged...)
 		if len(unmanaged) > 0 {
 			fmt.Fprintf(w, "    unmanaged:    %d entries (not managed by duck-ai)\n", len(unmanaged))
 			for _, u := range unmanaged {

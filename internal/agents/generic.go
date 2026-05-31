@@ -27,3 +27,5 @@ func (genericAdapter) SkillsDir() string {
 }
 
 func (genericAdapter) CommandsDir() string { return "" }
+
+func (genericAdapter) AgentsDir() string { return "" }
