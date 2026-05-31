@@ -29,7 +29,8 @@ description: >
   "previsualizar emails", "email viewer", or starts working on transactional emails
   in a PS project. Trigger proactively when the user is about to redesign emails.
 version: "5.0.0"
-author: Eduardo Calvo
+metadata:
+  author: Eduardo Calvo
 ---
 
 # PS Email Preview

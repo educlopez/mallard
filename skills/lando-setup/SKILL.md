@@ -1,3 +1,18 @@
+---
+name: lando-setup
+description: >
+  Sets up a Cinetic PrestaShop 8/9 project locally with Lando, or refreshes its
+  database from the server. Full setup configures Lando, syncs app/config, picks a
+  free port, imports the DB and fixes shop URLs; DB refresh mode only re-dumps and
+  re-imports the database. Use when the user says "monta el proyecto", "setup lando",
+  "prepara en local", "levanta el lando de X", "configura X en local", "actualízame
+  la DB", "refresca la DB de X", "bájame la DB de X", "sync DB", or "quiero la DB
+  actualizada de X".
+version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
+---
+
 # lando-setup
 
 ## Trigger

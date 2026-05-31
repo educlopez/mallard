@@ -8,6 +8,8 @@ description: >
   security scanning, vulnerability alerts, module CVE check, or Friends of Presta integration
   on a PrestaShop project.
 version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
 ---
 
 # PrestaShop Security Audit

@@ -7,6 +7,8 @@ description: >
   on PS frontend/maquetación in Lando and the user wants auto-reload, live reload,
   watcher, or is tired of reloading the browser manually after CSS changes.
 version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
 ---
 
 # PS Watch — BrowserSync para Panda child theme en Lando

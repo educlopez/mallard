@@ -9,6 +9,8 @@ description: >
   for GitHub-hosted projects, personal projects, or PrestaShop projects — use
   ps-security-audit skill instead for any PrestaShop project.
 version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
 ---
 
 # Cinetic Security Setup

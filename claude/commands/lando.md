@@ -2,6 +2,8 @@
 name: lando
 description: Crear configuración Lando para PrestaShop
 version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
 ---
 
 # Crear configuración Lando para PrestaShop

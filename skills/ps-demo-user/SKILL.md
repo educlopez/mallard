@@ -2,6 +2,8 @@
 name: ps-demo-user
 description: ps-demo-user — Usuario demo PrestaShop 8 (Lando)
 version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
 ---
 
 # ps-demo-user — Usuario demo PrestaShop 8 (Lando)

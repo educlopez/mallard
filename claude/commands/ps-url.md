@@ -2,6 +2,8 @@
 name: ps-url
 description: Actualizar shop_url de PrestaShop para Lando
 version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
 ---
 
 # Actualizar shop_url de PrestaShop para Lando

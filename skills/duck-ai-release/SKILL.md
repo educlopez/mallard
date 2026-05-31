@@ -7,6 +7,8 @@ description: >
   duck-ai", "nueva versión de duck-ai", or anything involving editing this repo
   and getting the change to the Cinetic team's machines.
 version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
 ---
 
 # duck-ai release workflow

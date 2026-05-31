@@ -2,6 +2,8 @@
 name: ps-customer
 description: Crear cliente de prueba en PrestaShop
 version: "0.1.0"
+metadata:
+  author: Eduardo Calvo
 ---
 
 # Crear cliente de prueba en PrestaShop
