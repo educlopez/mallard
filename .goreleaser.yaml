@@ -70,7 +70,7 @@ brews:
     directory: Formula
     name: duck-ai
     homepage: "https://github.com/educlopez/duck-ai"
-    description: "Personal Claude Code toolkit — PrestaShop/Lando/Cinetic skills, commands, and agents."
+    description: "Claude Code toolkit for PrestaShop development — skills, commands, and agents."
     license: "MIT"
     commit_msg_template: "chore: update duck-ai formula to {{ .Tag }}"
 
@@ -81,6 +81,6 @@ scoops:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     name: duck-ai
     homepage: "https://github.com/educlopez/duck-ai"
-    description: "Personal Claude Code toolkit — PrestaShop/Lando/Cinetic skills, commands, and agents."
+    description: "Claude Code toolkit for PrestaShop development — skills, commands, and agents."
     license: MIT
     commit_msg_template: "chore: update duck-ai to {{ .Tag }}"

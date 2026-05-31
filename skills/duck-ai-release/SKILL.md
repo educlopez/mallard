@@ -5,7 +5,7 @@ description: >
   Use when the user asks how to release duck-ai, ship a new duck-ai version, add a
   skill or command to duck-ai, bump a duck-ai version, "publicar duck-ai", "subir
   duck-ai", "nueva versión de duck-ai", or anything involving editing this repo
-  and getting the change to the Cinetic team's machines.
+  and getting the change to the team's machines.
 version: "0.1.0"
 metadata:
   author: Eduardo Calvo

@@ -1,7 +1,7 @@
 # duck-ai
 
 Personal Claude Code toolkit — skills, commands, and setup scripts.
-Built for day-to-day work at **Cinetic** (soon Neven).
+Built for the day-to-day work of PrestaShop development teams.
 
 ## Related tools
 
@@ -101,7 +101,7 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/du
 
 | Skill | Trigger |
 |-------|---------|
-| `cinetic-security-setup` | Add Trivy + pnpm supply chain protection to Cinetic GitLab projects (non-PS) |
+| `cinetic-security-setup` | Add Trivy + pnpm supply chain protection to GitLab projects (non-PS) |
 | `lando-img-placeholder` | Static image placeholder for local Lando/PrestaShop dev |
 | `ps-demo-user` | Create demo user in PrestaShop 8 (Lando) |
 | `ps-security-audit` | Weekly CVE scan for PS projects: Friends of Presta module check + Trivy + core version |

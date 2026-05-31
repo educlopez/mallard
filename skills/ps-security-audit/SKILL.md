@@ -4,7 +4,7 @@ description: >
   Sets up weekly automated security scanning for PrestaShop 8 projects hosted on GitLab.com.
   Checks: installed modules vs Friends of Presta advisory database, PrestaShop core version,
   and PHP/Composer dependencies via Trivy. Sends weekly HTML email report every Monday.
-  Use ONLY for Cinetic PrestaShop projects on GitLab.com. Triggers when user asks for
+  Use ONLY for PrestaShop projects on GitLab.com. Triggers when user asks for
   security scanning, vulnerability alerts, module CVE check, or Friends of Presta integration
   on a PrestaShop project.
 version: "0.1.0"
@@ -20,7 +20,7 @@ Covers:
 1. **Friends of Presta (FoP)** module advisory check — cross-references installed modules against known CVEs
 2. **PrestaShop core version** — detects outdated core vs latest stable
 3. **Trivy** — scans PHP/Composer dependencies for CVEs and leaked secrets
-4. **Weekly HTML email** — Monday 8am Madrid, same format as other Cinetic projects
+4. **Weekly HTML email** — Monday 8am Madrid, same format across projects
 
 ---
 
