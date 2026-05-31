@@ -2,7 +2,7 @@ package tui
 
 import "strings"
 
-// welcomeOptions returns the duck-ai welcome menu options.
+// welcomeOptions returns the mallard welcome menu options.
 func welcomeOptions() []string {
 	return []string{
 		"Install skills & commands",

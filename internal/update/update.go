@@ -1,8 +1,8 @@
-// Package update implements duck-ai's binary self-update ("duck-ai upgrade").
+// Package update implements mallard's binary self-update ("mallard upgrade").
 //
 // It queries the GitHub releases API for the latest tag, compares it against
 // the running version, and — when newer — downloads the matching release asset,
-// extracts the duck-ai binary, and atomically replaces the running executable.
+// extracts the mallard binary, and atomically replaces the running executable.
 //
 // The package is dependency-free (stdlib only). The HTTP client and the
 // "current executable path" resolver are package-level vars so tests can inject
@@ -25,8 +25,8 @@ import (
 	"strings"
 )
 
-// releasesURL is the GitHub API endpoint for the latest duck-ai release.
-const releasesURL = "https://api.github.com/repos/educlopez/duck-ai/releases/latest"
+// releasesURL is the GitHub API endpoint for the latest mallard release.
+const releasesURL = "https://api.github.com/repos/educlopez/mallard/releases/latest"
 
 // Injection points for testing. Tests override these to avoid the network and
 // to control which executable path the self-replace logic sees.
@@ -63,8 +63,8 @@ type Options struct {
 // Run performs the upgrade (or check) and writes a human report to w.
 func Run(w io.Writer, opts Options) error {
 	// Env guard.
-	if os.Getenv("DUCK_AI_NO_SELF_UPDATE") == "1" {
-		fmt.Fprintln(w, "  Self-update disabled via DUCK_AI_NO_SELF_UPDATE=1.")
+	if os.Getenv("MALLARD_NO_SELF_UPDATE") == "1" {
+		fmt.Fprintln(w, "  Self-update disabled via MALLARD_NO_SELF_UPDATE=1.")
 		return nil
 	}
 
@@ -94,7 +94,7 @@ func Run(w io.Writer, opts Options) error {
 	}
 
 	if opts.Check {
-		fmt.Fprintf(w, "  Update available: %s -> %s (run `duck-ai upgrade` to apply).\n", opts.CurrentVersion, latest)
+		fmt.Fprintf(w, "  Update available: %s -> %s (run `mallard upgrade` to apply).\n", opts.CurrentVersion, latest)
 		return nil
 	}
 
@@ -139,7 +139,7 @@ func fetchLatest() (release, error) {
 		return release{}, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "duck-ai-upgrade")
+	req.Header.Set("User-Agent", "mallard-upgrade")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -221,20 +221,20 @@ func parseVersion(v string) []int {
 }
 
 // detectPackageManager returns "brew", "scoop", or "" based on the executable
-// path. Homebrew installs land under .../Cellar/duck-ai/... (or a linked opt
-// path); Scoop installs under .../scoop/apps/duck-ai/....
+// path. Homebrew installs land under .../Cellar/mallard/... (or a linked opt
+// path); Scoop installs under .../scoop/apps/mallard/....
 func detectPackageManager(exe string) string {
 	// Normalize backslashes to forward slashes regardless of host OS so the
 	// substring checks work for Windows paths even when tests run on unix.
 	p := strings.ReplaceAll(exe, "\\", "/")
 	lower := strings.ToLower(p)
-	if strings.Contains(p, "/Cellar/duck-ai/") ||
-		strings.Contains(p, "/opt/duck-ai/") ||
+	if strings.Contains(p, "/Cellar/mallard/") ||
+		strings.Contains(p, "/opt/mallard/") ||
 		strings.Contains(p, "/Homebrew/") ||
 		strings.Contains(lower, "/homebrew/") {
 		return "brew"
 	}
-	if strings.Contains(lower, "/scoop/apps/duck-ai/") {
+	if strings.Contains(lower, "/scoop/apps/mallard/") {
 		return "scoop"
 	}
 	return ""
@@ -243,16 +243,16 @@ func detectPackageManager(exe string) string {
 func printPackageManagerHint(w io.Writer, mgr string) {
 	switch mgr {
 	case "brew":
-		fmt.Fprintln(w, "  Installed via Homebrew — run `brew upgrade duck-ai` instead.")
+		fmt.Fprintln(w, "  Installed via Homebrew — run `brew upgrade mallard` instead.")
 	case "scoop":
-		fmt.Fprintln(w, "  Installed via Scoop — run `scoop update duck-ai` instead.")
+		fmt.Fprintln(w, "  Installed via Scoop — run `scoop update mallard` instead.")
 	}
 }
 
 // selectAsset picks the release asset matching the given OS/arch. The names
 // follow the .goreleaser.yaml template:
 //
-//	duck-ai_<version>_<os>_<arch>.tar.gz   (.zip on windows)
+//	mallard_<version>_<os>_<arch>.tar.gz   (.zip on windows)
 //
 // where <version> has no leading "v". We match on the os/arch infix plus the
 // expected extension rather than reconstructing the version, so it is robust to
@@ -271,7 +271,7 @@ func selectAsset(assets []asset, goos, goarch string) (asset, error) {
 	return asset{}, fmt.Errorf("no release asset found for %s/%s (looked for *%s)", goos, goarch, infix)
 }
 
-// downloadAndReplace downloads the asset, extracts the duck-ai binary, writes it
+// downloadAndReplace downloads the asset, extracts the mallard binary, writes it
 // to a temp file beside exe, chmod +x, and atomically renames it over exe.
 func downloadAndReplace(w io.Writer, a asset, exe string) error {
 	fmt.Fprintf(w, "  Downloading %s ...\n", a.Name)
@@ -286,7 +286,7 @@ func downloadAndReplace(w io.Writer, a asset, exe string) error {
 	}
 
 	dir := filepath.Dir(exe)
-	tmp, err := os.CreateTemp(dir, ".duck-ai-upgrade-*")
+	tmp, err := os.CreateTemp(dir, ".mallard-upgrade-*")
 	if err != nil {
 		return fmt.Errorf("create temp file next to executable (check permissions on %s): %w", dir, err)
 	}
@@ -315,7 +315,7 @@ func download(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "duck-ai-upgrade")
+	req.Header.Set("User-Agent", "mallard-upgrade")
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -327,7 +327,7 @@ func download(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-// extractBinary pulls the duck-ai executable out of a .tar.gz or .zip archive.
+// extractBinary pulls the mallard executable out of a .tar.gz or .zip archive.
 func extractBinary(assetName string, data []byte) ([]byte, error) {
 	if strings.HasSuffix(assetName, ".zip") {
 		return extractFromZip(data)
@@ -335,13 +335,13 @@ func extractBinary(assetName string, data []byte) ([]byte, error) {
 	return extractFromTarGz(data)
 }
 
-// binaryName is the name of the binary inside the archive (duck-ai.exe on
-// windows, duck-ai elsewhere).
+// binaryName is the name of the binary inside the archive (mallard.exe on
+// windows, mallard elsewhere).
 func binaryName() string {
 	if runtime.GOOS == "windows" {
-		return "duck-ai.exe"
+		return "mallard.exe"
 	}
-	return "duck-ai"
+	return "mallard"
 }
 
 func extractFromTarGz(data []byte) ([]byte, error) {

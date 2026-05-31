@@ -13,10 +13,10 @@
    ```
 3. Locally (during development):
    ```bash
-   go build -o duck-ai .
-   ./duck-ai update           # re-link skills into ~/.claude/skills (with backup)
-   ./duck-ai doctor           # confirm the new skill appears under "managed"
-   ./duck-ai registry         # check version + drift status
+   go build -o mallard .
+   ./mallard update           # re-link skills into ~/.claude/skills (with backup)
+   ./mallard doctor           # confirm the new skill appears under "managed"
+   ./mallard registry         # check version + drift status
    ```
 4. Ship to the team:
    ```bash
@@ -26,7 +26,7 @@
    git tag vX.Y.Z
    git push origin vX.Y.Z      # GH Actions builds + publishes Homebrew/Scoop/binaries
    ```
-   Team members pick it up with `brew upgrade duck-ai` (or `scoop update duck-ai`) followed by `duck-ai update`.
+   Team members pick it up with `brew upgrade mallard` (or `scoop update mallard`) followed by `mallard update`.
 
 ## Adding a command
 
@@ -39,7 +39,7 @@
    version: "0.1.0"
    ---
    ```
-3. Available in Claude Code as `/<command-name>` after running `duck-ai update`.
+3. Available in Claude Code as `/<command-name>` after running `mallard update`.
 
 ## Adding an agent
 
@@ -58,7 +58,7 @@ codex/opencode/generic adapters skip them, since the format is Claude-specific).
    version: "0.1.0"
    ---
    ```
-3. Available as a subagent after `duck-ai update`. A companion `/<name>` command in
+3. Available as a subagent after `mallard update`. A companion `/<name>` command in
    `claude/commands/` is the usual way to invoke it explicitly.
 
 ## Skill scope
@@ -71,4 +71,4 @@ codex/opencode/generic adapters skip them, since the format is Claude-specific).
 
 ## Bumping a skill version
 
-Just edit the `version:` field in the skill's frontmatter and ship a new release. `duck-ai registry` will surface drift between installed and source versions per agent.
+Just edit the `version:` field in the skill's frontmatter and ship a new release. `mallard registry` will surface drift between installed and source versions per agent.

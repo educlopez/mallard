@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/educlopez/duck-ai/internal/agents"
+	"github.com/educlopez/mallard/internal/agents"
 )
 
 // fakeAdapter is a test double for agents.Adapter pointing its three dirs

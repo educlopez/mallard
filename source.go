@@ -12,12 +12,12 @@ import (
 //
 // Layout:
 //
-//	~/.duck-ai/source/<version>/skills/...
-//	~/.duck-ai/source/<version>/claude/commands/...
-//	~/.duck-ai/source/<version>/.version    (marker)
+//	~/.mallard/source/<version>/skills/...
+//	~/.mallard/source/<version>/claude/commands/...
+//	~/.mallard/source/<version>/.version    (marker)
 //
 // Re-extraction is skipped when a `.version` marker exists with matching
-// content. If $HOME is unavailable, falls back to $TMPDIR/duck-ai/source/.
+// content. If $HOME is unavailable, falls back to $TMPDIR/mallard/source/.
 func materializeEmbeddedSource(version string) (string, error) {
 	base, err := sourceCacheBase()
 	if err != nil {
@@ -76,7 +76,7 @@ func materializeEmbeddedSource(version string) (string, error) {
 
 func sourceCacheBase() (string, error) {
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, ".duck-ai", "source"), nil
+		return filepath.Join(home, ".mallard", "source"), nil
 	}
-	return filepath.Join(os.TempDir(), "duck-ai", "source"), nil
+	return filepath.Join(os.TempDir(), "mallard", "source"), nil
 }

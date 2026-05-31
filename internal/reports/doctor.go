@@ -1,5 +1,5 @@
-// Package reports holds the writer-based renderers for `duck-ai doctor` and
-// `duck-ai registry`. Both the cmd CLI wrappers and the TUI screens consume
+// Package reports holds the writer-based renderers for `mallard doctor` and
+// `mallard registry`. Both the cmd CLI wrappers and the TUI screens consume
 // these functions. Keeping them here breaks the cycle between cmd and
 // internal/tui (cmd imports internal/tui via install.go).
 package reports
@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/educlopez/duck-ai/internal/agents"
-	"github.com/educlopez/duck-ai/internal/skills"
+	"github.com/educlopez/mallard/internal/agents"
+	"github.com/educlopez/mallard/internal/skills"
 )
 
-// Doctor writes the duck-ai doctor report to w. repoRoot is the absolute or
-// relative path to the duck-ai source repo. scope selects global (home-based)
+// Doctor writes the mallard doctor report to w. repoRoot is the absolute or
+// relative path to the mallard source repo. scope selects global (home-based)
 // or workspace (project-local) directories; workspaceRoot is the project root
 // consulted in workspace scope.
 func Doctor(w io.Writer, repoRoot string, scope agents.Scope, workspaceRoot string) error {
@@ -48,17 +48,17 @@ func Doctor(w io.Writer, repoRoot string, scope agents.Scope, workspaceRoot stri
 		commandsManaged, commandsUnmanaged := scanDir(commandsDir, absRepo)
 		agentsManaged, agentsUnmanaged := scanDir(agentsDir, absRepo)
 		managed := skillsManaged + commandsManaged + agentsManaged
-		fmt.Fprintf(w, "    managed:      %d duck-ai symlinks\n", managed)
+		fmt.Fprintf(w, "    managed:      %d mallard symlinks\n", managed)
 
 		unmanaged := append([]driftEntry{}, skillsUnmanaged...)
 		unmanaged = append(unmanaged, commandsUnmanaged...)
 		unmanaged = append(unmanaged, agentsUnmanaged...)
 		if len(unmanaged) > 0 {
-			fmt.Fprintf(w, "    unmanaged:    %d entries (not managed by duck-ai)\n", len(unmanaged))
+			fmt.Fprintf(w, "    unmanaged:    %d entries (not managed by mallard)\n", len(unmanaged))
 			for _, u := range unmanaged {
 				fmt.Fprintf(w, "      - %s (%s)\n", u.relPath, u.kind)
 			}
-			fmt.Fprintf(w, "    hint: run `duck-ai update` to absorb colliding entries; non-colliding ones will be left alone.\n")
+			fmt.Fprintf(w, "    hint: run `mallard update` to absorb colliding entries; non-colliding ones will be left alone.\n")
 		}
 	}
 
@@ -75,11 +75,11 @@ type FixResult struct {
 	Src    string
 }
 
-// DoctorFix conservatively repairs ONLY duck-ai-managed breakage in detected
+// DoctorFix conservatively repairs ONLY mallard-managed breakage in detected
 // agents' directories and writes a summary of what it fixed to w. It performs
 // exactly two kinds of repair:
 //
-//  1. relinked-broken — a symlink whose target points inside the duck-ai repo
+//  1. relinked-broken — a symlink whose target points inside the mallard repo
 //     but no longer resolves (the source moved/renamed). It is removed and, if
 //     a current source item of the same name exists, re-linked to it.
 //  2. created-missing — a current source item that has no entry at all in the
@@ -121,17 +121,17 @@ func DoctorFix(w io.Writer, repoRoot string, scope agents.Scope, workspaceRoot s
 	}
 
 	if len(fixes) == 0 {
-		fmt.Fprintf(w, "\n  Nothing to fix — no broken or missing duck-ai links found.\n")
+		fmt.Fprintf(w, "\n  Nothing to fix — no broken or missing mallard links found.\n")
 		return fixes, nil
 	}
-	fmt.Fprintf(w, "\n  Fixed %d duck-ai-managed link(s):\n", len(fixes))
+	fmt.Fprintf(w, "\n  Fixed %d mallard-managed link(s):\n", len(fixes))
 	for _, f := range fixes {
 		fmt.Fprintf(w, "    [%s] %s/%s — %s\n", f.Agent, f.Kind, f.Name, f.Action)
 	}
 	return fixes, nil
 }
 
-// fixDir repairs broken and missing duck-ai-managed links in a single agent
+// fixDir repairs broken and missing mallard-managed links in a single agent
 // destination dir. src is the list of current source items for this kind.
 func fixDir(agentID, kind, dstDir string, src []skills.Skill, repoRoot string) []FixResult {
 	if dstDir == "" {
@@ -172,7 +172,7 @@ func fixDir(agentID, kind, dstDir string, src []skills.Skill, repoRoot string) [
 			if !filepath.IsAbs(absTarget) {
 				absTarget = filepath.Join(filepath.Dir(full), absTarget)
 			}
-			// Only consider links that point INTO the duck-ai repo (managed).
+			// Only consider links that point INTO the mallard repo (managed).
 			if !(absTarget == repoRoot || strings.HasPrefix(absTarget, repoRoot+string(filepath.Separator))) {
 				continue
 			}
@@ -245,7 +245,7 @@ type driftEntry struct {
 	kind    string // "file" or "dir"
 }
 
-// scanDir walks dir one level deep and returns the count of duck-ai-managed
+// scanDir walks dir one level deep and returns the count of mallard-managed
 // symlinks plus a slice of unmanaged entries (real files/dirs, or symlinks
 // pointing outside repoRoot). Hidden entries are skipped.
 func scanDir(dir, repoRoot string) (managed int, unmanaged []driftEntry) {

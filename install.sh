@@ -2,22 +2,22 @@
 set -euo pipefail
 
 # ============================================================================
-# duck-ai — Install Script
+# mallard — Install Script
 # Personal Claude Code toolkit — skills, commands, and setup scripts.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/educlopez/mallard/main/install.sh | bash
 #
 # Pin a specific version:
-#   DUCK_AI_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
+#   MALLARD_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/educlopez/mallard/main/install.sh | bash
 #
 # Override install directory:
-#   DUCK_AI_INSTALL_DIR=/usr/local/bin curl -fsSL ... | bash
+#   MALLARD_INSTALL_DIR=/usr/local/bin curl -fsSL ... | bash
 # ============================================================================
 
 GITHUB_OWNER="educlopez"
-GITHUB_REPO="duck-ai"
-BINARY_NAME="duck-ai"
+GITHUB_REPO="mallard"
+BINARY_NAME="mallard"
 
 # Try to resolve a GitHub token for private-repo downloads.
 # Order: explicit GITHUB_TOKEN env, GH_TOKEN env, or `gh auth token` if available.
@@ -116,8 +116,8 @@ check_prerequisites() {
 # ============================================================================
 
 resolve_version() {
-    if [ -n "${DUCK_AI_VERSION:-}" ]; then
-        VERSION_TAG="$DUCK_AI_VERSION"
+    if [ -n "${MALLARD_VERSION:-}" ]; then
+        VERSION_TAG="$MALLARD_VERSION"
         # Allow user to pass either "v0.2.0" or "0.2.0"
         case "$VERSION_TAG" in
             v*) ;;
@@ -134,10 +134,10 @@ resolve_version() {
         body="$(printf '%s\n' "$response" | sed '$d')"
 
         if [ "$http_code" = "404" ] && [ -z "$GH_AUTH_TOKEN" ]; then
-            fatal "GitHub API returned 404 — duck-ai is private. Run \`gh auth login\` first, or export GITHUB_TOKEN before piping to bash."
+            fatal "GitHub API returned 404 — mallard is private. Run \`gh auth login\` first, or export GITHUB_TOKEN before piping to bash."
         fi
         if [ "$http_code" != "200" ]; then
-            fatal "GitHub API returned HTTP $http_code. Rate limited? Try again or pin DUCK_AI_VERSION."
+            fatal "GitHub API returned HTTP $http_code. Rate limited? Try again or pin MALLARD_VERSION."
         fi
 
         # Extract tag_name — works without jq
@@ -172,7 +172,7 @@ download_and_install() {
     info "Downloading ${archive_name}..."
     if ! curl_auth -sfL -o "${tmpdir}/${archive_name}" "$download_url"; then
         if [ -z "$GH_AUTH_TOKEN" ]; then
-            fatal "Failed to download (likely auth — duck-ai is private):\n  ${download_url}\n\nRun \`gh auth login\` first, or export GITHUB_TOKEN before retrying."
+            fatal "Failed to download (likely auth — mallard is private):\n  ${download_url}\n\nRun \`gh auth login\` first, or export GITHUB_TOKEN before retrying."
         fi
         fatal "Failed to download:\n  ${download_url}\n\nDoes a release exist for ${VERSION_TAG} on ${OS}/${ARCH}?"
     fi
@@ -226,7 +226,7 @@ download_and_install() {
     fi
 
     # Install destination
-    local install_dir="${DUCK_AI_INSTALL_DIR:-${HOME}/.local/bin}"
+    local install_dir="${MALLARD_INSTALL_DIR:-${HOME}/.local/bin}"
     mkdir -p "$install_dir"
 
     info "Installing to ${install_dir}/${BINARY_NAME}..."
@@ -236,7 +236,7 @@ download_and_install() {
             sudo cp "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}"
             sudo chmod +x "${install_dir}/${BINARY_NAME}"
         else
-            fatal "Cannot write to ${install_dir}. Set DUCK_AI_INSTALL_DIR to a writable directory."
+            fatal "Cannot write to ${install_dir}. Set MALLARD_INSTALL_DIR to a writable directory."
         fi
     else
         chmod +x "${install_dir}/${BINARY_NAME}"
@@ -266,9 +266,9 @@ print_next_steps() {
     esac
 
     printf '%bNext steps:%b\n' "$BOLD" "$NC"
-    printf '  %b1.%b  %bduck-ai update%b   install Claude/Codex/OpenCode skills + commands\n' "$CYAN" "$NC" "$BOLD" "$NC"
-    printf '  %b2.%b  %bduck-ai doctor%b   verify installation\n' "$CYAN" "$NC" "$BOLD" "$NC"
-    printf '  %b3.%b  %bduck-ai%b          launch interactive TUI\n' "$CYAN" "$NC" "$BOLD" "$NC"
+    printf '  %b1.%b  %bmallard update%b   install Claude/Codex/OpenCode skills + commands\n' "$CYAN" "$NC" "$BOLD" "$NC"
+    printf '  %b2.%b  %bmallard doctor%b   verify installation\n' "$CYAN" "$NC" "$BOLD" "$NC"
+    printf '  %b3.%b  %bmallard%b          launch interactive TUI\n' "$CYAN" "$NC" "$BOLD" "$NC"
     echo ""
     printf '%bDocs: https://github.com/%s/%s%b\n' "$DIM" "$GITHUB_OWNER" "$GITHUB_REPO" "$NC"
     echo ""

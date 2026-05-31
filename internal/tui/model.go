@@ -8,10 +8,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/educlopez/duck-ai/internal/agents"
-	"github.com/educlopez/duck-ai/internal/reports"
-	"github.com/educlopez/duck-ai/internal/skills"
-	"github.com/educlopez/duck-ai/internal/updater"
+	"github.com/educlopez/mallard/internal/agents"
+	"github.com/educlopez/mallard/internal/reports"
+	"github.com/educlopez/mallard/internal/skills"
+	"github.com/educlopez/mallard/internal/updater"
 )
 
 // screen represents which TUI screen is active.
@@ -774,7 +774,7 @@ func (m Model) viewUpdateDone() string {
 		b.WriteString("\n" + styleWarning.Render(fmt.Sprintf("  Backups saved to %s", rpt.BackupDir)) + "\n")
 		stamp := backupStamp(rpt.BackupDir)
 		if stamp != "" {
-			b.WriteString(styleMuted.Render(fmt.Sprintf("  Restore with: duck-ai update --restore %s", stamp)) + "\n")
+			b.WriteString(styleMuted.Render(fmt.Sprintf("  Restore with: mallard update --restore %s", stamp)) + "\n")
 		}
 	}
 	b.WriteString("\n" + styleKey.Render("  enter  back to menu  •  q  quit"))

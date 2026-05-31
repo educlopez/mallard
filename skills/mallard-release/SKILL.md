@@ -1,25 +1,25 @@
 ---
-name: duck-ai-release
+name: mallard-release
 description: >
-  Workflow for adding skills/commands to duck-ai and shipping a new release.
-  Use when the user asks how to release duck-ai, ship a new duck-ai version, add a
-  skill or command to duck-ai, bump a duck-ai version, "publicar duck-ai", "subir
-  duck-ai", "nueva versión de duck-ai", or anything involving editing this repo
+  Workflow for adding skills/commands to mallard and shipping a new release.
+  Use when the user asks how to release mallard, ship a new mallard version, add a
+  skill or command to mallard, bump a mallard version, "publicar mallard", "subir
+  mallard", "nueva versión de mallard", or anything involving editing this repo
   and getting the change to the team's machines.
 version: "0.1.0"
 metadata:
   author: Eduardo Calvo
 ---
 
-# duck-ai release workflow
+# mallard release workflow
 
-Reference for adding/updating skills, commands, and shipping releases for [duck-ai](https://github.com/educlopez/duck-ai). The tool lives at `/Users/eduardocalvolopez/Developer/Personal/duck-ai` (on Eduardo's machine).
+Reference for adding/updating skills, commands, and shipping releases for [mallard](https://github.com/educlopez/mallard). The tool lives at `/Users/eduardocalvolopez/Developer/Personal/duck-ai` (on Eduardo's machine).
 
 ## When to use this skill
 
-- "How do I add a skill to duck-ai?"
-- "Release a new version of duck-ai" / "ship duck-ai" / "tag duck-ai vX.Y.Z"
-- "Update duck-ai" / "bump the duck-ai version"
+- "How do I add a skill to mallard?"
+- "Release a new version of mallard" / "ship mallard" / "tag mallard vX.Y.Z"
+- "Update mallard" / "bump the mallard version"
 - Anything that involves editing files under `skills/`, `claude/commands/`, `claude/agents/`, or shipping the change to other team members.
 
 ## TL;DR
@@ -28,9 +28,9 @@ Reference for adding/updating skills, commands, and shipping releases for [duck-
 # 1. Edit the skill/command file
 # 2. Bump its `version:` in frontmatter (semver, conservative)
 # 3. Test locally
-go build -o duck-ai .
-./duck-ai update                    # re-link with backup
-./duck-ai registry                  # confirm new version + ok status
+go build -o mallard .
+./mallard update                    # re-link with backup
+./mallard registry                  # confirm new version + ok status
 
 # 4. Commit using Conventional Commits, in English
 git add skills/<name>/ claude/commands/<name>.md
@@ -49,8 +49,8 @@ git push origin vX.Y.Z
 Team members pick it up with:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
-duck-ai update
+curl -fsSL https://raw.githubusercontent.com/educlopez/mallard/main/install.sh | bash
+mallard update
 ```
 
 ## Adding a new skill
@@ -67,8 +67,8 @@ duck-ai update
    ---
    ```
 2. Write the skill body in markdown. Sections, code blocks, tables — whatever helps Claude execute the skill. Reference existing skills in this repo for style.
-3. Locally: `go build -o duck-ai . && ./duck-ai update` — the symlink will appear in `~/.claude/skills/<skill-name>/`.
-4. Validate: `./duck-ai doctor` (managed count goes up) and `./duck-ai registry` (entry shows `v0.1.0 ok`).
+3. Locally: `go build -o mallard . && ./mallard update` — the symlink will appear in `~/.claude/skills/<skill-name>/`.
+4. Validate: `./mallard doctor` (managed count goes up) and `./mallard registry` (entry shows `v0.1.0 ok`).
 5. Skip to **Shipping a release** below.
 
 ## Adding a new command
@@ -82,7 +82,7 @@ duck-ai update
    ---
    ```
 2. Body: instructions for the slash command. Available in Claude Code as `/<command-name>` after install.
-3. Locally: `./duck-ai update`.
+3. Locally: `./mallard update`.
 4. Skip to **Shipping a release** below.
 
 ## Adding a new agent
@@ -103,7 +103,7 @@ Agents are Claude Code subagents. They symlink to `~/.claude/agents/` and are **
    ```
 2. Body: the agent's system prompt. Optionally add a `/<name>` command in `claude/commands/`
    to invoke it explicitly.
-3. Locally: `./duck-ai update` — the symlink appears in `~/.claude/agents/<agent-name>.md`.
+3. Locally: `./mallard update` — the symlink appears in `~/.claude/agents/<agent-name>.md`.
 4. Skip to **Shipping a release** below.
 
 ## Bumping an existing skill, command, or agent
@@ -113,7 +113,7 @@ Agents are Claude Code subagents. They symlink to `~/.claude/agents/` and are **
    - Patch (0.1.0 → 0.1.1): typo fixes, doc clarifications, no behavior change.
    - Minor (0.1.0 → 0.2.0): new functionality inside the skill, backward-compatible.
    - Major (0.1.0 → 1.0.0): breaking change in expected user-facing behavior (rare for a skill).
-3. Locally: `./duck-ai update && ./duck-ai registry` — confirm new version shows `ok`, old `drift` if you also have an older symlink elsewhere.
+3. Locally: `./mallard update && ./mallard registry` — confirm new version shows `ok`, old `drift` if you also have an older symlink elsewhere.
 
 ## Shipping a release
 
@@ -126,7 +126,7 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-Version the **duck-ai release**, not the skill: skills carry their own versions inside frontmatter, the tag versions the binary + the set of skills shipped together.
+Version the **mallard release**, not the skill: skills carry their own versions inside frontmatter, the tag versions the binary + the set of skills shipped together.
 
 GitHub Actions (`.github/workflows/release.yml`) runs goreleaser, which:
 - Builds for darwin/linux/windows × amd64/arm64
@@ -150,19 +150,19 @@ EOF
 ## Team upgrade path
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
-duck-ai update     # re-symlinks skills + commands, backs up any conflicts
-duck-ai doctor     # verify
-duck-ai registry   # see what's installed per agent + versions
+curl -fsSL https://raw.githubusercontent.com/educlopez/mallard/main/install.sh | bash
+mallard update     # re-symlinks skills + commands, backs up any conflicts
+mallard doctor     # verify
+mallard registry   # see what's installed per agent + versions
 ```
 
-Windows: download the latest zip from https://github.com/educlopez/duck-ai/releases and replace `duck-ai.exe` on the PATH.
+Windows: download the latest zip from https://github.com/educlopez/mallard/releases and replace `mallard.exe` on the PATH.
 
 ## Gotchas
 
-- **NEVER skip the `version:` field** on skill/command frontmatter. Without it, `duck-ai registry` reports `unversioned`.
+- **NEVER skip the `version:` field** on skill/command frontmatter. Without it, `mallard registry` reports `unversioned`.
 - **Conventional Commits are mandatory** — they drive the changelog grouping. `chore:` commits get filtered out of release notes.
-- **`duck-ai update` makes backups** before replacing files. If you blow something away, `duck-ai update --list-backups` and `--restore <ts>` will recover it.
+- **`mallard update` makes backups** before replacing files. If you blow something away, `mallard update --list-backups` and `--restore <ts>` will recover it.
 - **The first run on a new agent dir** (Claude / Codex / OpenCode / generic) appears as `missing → installed` for every entry. That's expected, not drift.
 - **Skills only ship via tags.** Pushing to `main` without tagging publishes nothing — GH Actions release workflow only fires on `v*` tags.
 
@@ -170,9 +170,9 @@ Windows: download the latest zip from https://github.com/educlopez/duck-ai/relea
 
 | Command | What |
 |---------|------|
-| `./duck-ai` | Interactive TUI (Install / Update / Doctor / Registry / Quit) |
-| `./duck-ai update --dry-run` | Show what update would change without touching disk |
-| `./duck-ai update --restore <ts>` | Recover from a backup batch |
-| `./duck-ai registry --source` | List what the repo ships (without scanning installed) |
-| `./duck-ai registry --all` | Include foreign / unmanaged entries from other tooling |
-| `./duck-ai version` | Print version (release tag injected at build time) |
+| `./mallard` | Interactive TUI (Install / Update / Doctor / Registry / Quit) |
+| `./mallard update --dry-run` | Show what update would change without touching disk |
+| `./mallard update --restore <ts>` | Recover from a backup batch |
+| `./mallard registry --source` | List what the repo ships (without scanning installed) |
+| `./mallard registry --all` | Include foreign / unmanaged entries from other tooling |
+| `./mallard version` | Print version (release tag injected at build time) |

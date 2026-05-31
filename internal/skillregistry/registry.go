@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/educlopez/duck-ai/internal/agents"
+	"github.com/educlopez/mallard/internal/agents"
 )
 
 // Manifest is a minimal record of one skill or command on disk.
@@ -19,7 +19,7 @@ type Manifest struct {
 	Kind        string `json:"kind"` // "skill", "command" or "agent"
 }
 
-// ParseSource walks the duck-ai repo and returns one Manifest per source
+// ParseSource walks the mallard repo and returns one Manifest per source
 // skill (skills/<name>/SKILL.md) and command (claude/commands/<name>.md).
 func ParseSource(repoRoot string) ([]Manifest, error) {
 	var out []Manifest
@@ -89,7 +89,7 @@ func ParseSource(repoRoot string) ([]Manifest, error) {
 }
 
 // ParseInstalled walks the adapter's SkillsDir and CommandsDir one level deep
-// and parses any symlink targeting a duck-ai source file. Non-symlink entries
+// and parses any symlink targeting a mallard source file. Non-symlink entries
 // are skipped (doctor surfaces them as drift).
 func ParseInstalled(adapter agents.Adapter) ([]Manifest, error) {
 	var out []Manifest

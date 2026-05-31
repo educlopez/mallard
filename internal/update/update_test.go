@@ -33,10 +33,10 @@ func withMockClient(t *testing.T, status int, body string) {
 const cannedRelease = `{
   "tag_name": "v0.3.0",
   "assets": [
-    {"name": "duck-ai_0.3.0_darwin_arm64.tar.gz", "browser_download_url": "https://example.com/darwin_arm64"},
-    {"name": "duck-ai_0.3.0_darwin_amd64.tar.gz", "browser_download_url": "https://example.com/darwin_amd64"},
-    {"name": "duck-ai_0.3.0_linux_amd64.tar.gz",  "browser_download_url": "https://example.com/linux_amd64"},
-    {"name": "duck-ai_0.3.0_windows_amd64.zip",   "browser_download_url": "https://example.com/windows_amd64"}
+    {"name": "mallard_0.3.0_darwin_arm64.tar.gz", "browser_download_url": "https://example.com/darwin_arm64"},
+    {"name": "mallard_0.3.0_darwin_amd64.tar.gz", "browser_download_url": "https://example.com/darwin_amd64"},
+    {"name": "mallard_0.3.0_linux_amd64.tar.gz",  "browser_download_url": "https://example.com/linux_amd64"},
+    {"name": "mallard_0.3.0_windows_amd64.zip",   "browser_download_url": "https://example.com/windows_amd64"}
   ]
 }`
 
@@ -67,12 +67,12 @@ func TestDetectPackageManager(t *testing.T) {
 		path string
 		want string
 	}{
-		{"/opt/homebrew/Cellar/duck-ai/0.3.0/bin/duck-ai", "brew"},
-		{"/usr/local/Cellar/duck-ai/0.3.0/bin/duck-ai", "brew"},
-		{"/opt/homebrew/opt/duck-ai/bin/duck-ai", "brew"},
-		{"C:\\Users\\me\\scoop\\apps\\duck-ai\\current\\duck-ai.exe", "scoop"},
-		{"/Users/me/.local/bin/duck-ai", ""},
-		{"/usr/local/bin/duck-ai", ""},
+		{"/opt/homebrew/Cellar/mallard/0.3.0/bin/mallard", "brew"},
+		{"/usr/local/Cellar/mallard/0.3.0/bin/mallard", "brew"},
+		{"/opt/homebrew/opt/mallard/bin/mallard", "brew"},
+		{"C:\\Users\\me\\scoop\\apps\\mallard\\current\\mallard.exe", "scoop"},
+		{"/Users/me/.local/bin/mallard", ""},
+		{"/usr/local/bin/mallard", ""},
 	}
 	for _, tt := range tests {
 		if got := detectPackageManager(tt.path); got != tt.want {
@@ -171,7 +171,7 @@ func TestRunNewerThanLatest(t *testing.T) {
 }
 
 func TestRunEnvGuard(t *testing.T) {
-	t.Setenv("DUCK_AI_NO_SELF_UPDATE", "1")
+	t.Setenv("MALLARD_NO_SELF_UPDATE", "1")
 	var buf bytes.Buffer
 	if err := Run(&buf, Options{CurrentVersion: "v0.2.0"}); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -186,7 +186,7 @@ func TestRunBrewGuard(t *testing.T) {
 	origExe := executablePath
 	t.Cleanup(func() { executablePath = origExe })
 	executablePath = func() (string, error) {
-		return "/opt/homebrew/Cellar/duck-ai/0.2.0/bin/duck-ai", nil
+		return "/opt/homebrew/Cellar/mallard/0.2.0/bin/mallard", nil
 	}
 	var buf bytes.Buffer
 	// Behind latest and not a dev build, so it would normally try to replace —
@@ -194,7 +194,7 @@ func TestRunBrewGuard(t *testing.T) {
 	if err := Run(&buf, Options{CurrentVersion: "v0.2.0"}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if !strings.Contains(buf.String(), "brew upgrade duck-ai") {
+	if !strings.Contains(buf.String(), "brew upgrade mallard") {
 		t.Fatalf("expected brew hint, got: %s", buf.String())
 	}
 }
@@ -204,7 +204,7 @@ func TestRunDryRunResolvesAsset(t *testing.T) {
 	origExe := executablePath
 	t.Cleanup(func() { executablePath = origExe })
 	// A path outside any package manager so the guard does not fire.
-	executablePath = func() (string, error) { return t.TempDir() + "/duck-ai", nil }
+	executablePath = func() (string, error) { return t.TempDir() + "/mallard", nil }
 	var buf bytes.Buffer
 	if err := Run(&buf, Options{CurrentVersion: "v0.2.0", DryRun: true}); err != nil {
 		t.Fatalf("Run dry-run: %v", err)

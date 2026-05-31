@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/educlopez/duck-ai/internal/agents"
+	"github.com/educlopez/mallard/internal/agents"
 )
 
-// buildSourceRepo creates a minimal duck-ai source repo containing a single
+// buildSourceRepo creates a minimal mallard source repo containing a single
 // skill, and returns the repo root.
 func buildSourceRepo(t *testing.T) string {
 	t.Helper()

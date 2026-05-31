@@ -1,4 +1,4 @@
-# duck-ai
+# mallard
 
 Personal Claude Code toolkit — skills, commands, and setup scripts.
 Built for the day-to-day work of PrestaShop development teams.
@@ -12,64 +12,64 @@ Built for the day-to-day work of PrestaShop development teams.
 > **Note**: the PrestaShop/Panda expert agents + knowledge base from
 > [prestashop-experts](https://github.com/educlopez/prestashop-experts) are also bundled
 > here — see the [Agents](#agents) section below. The standalone plugin stays available
-> for external/freelance use; duck-ai is the team distribution.
+> for external/freelance use; mallard is the team distribution.
 
 ## Install
 
 ### macOS / Linux (Homebrew)
 
 ```bash
-brew install educlopez/tap/duck-ai
+brew install educlopez/tap/mallard
 ```
 
-Upgrade later with `brew upgrade duck-ai`.
+Upgrade later with `brew upgrade mallard`.
 
 ### Windows (Scoop)
 
 ```powershell
 scoop bucket add educlopez https://github.com/educlopez/scoop-bucket
-scoop install duck-ai
+scoop install mallard
 ```
 
-Upgrade later with `scoop update duck-ai`.
+Upgrade later with `scoop update mallard`.
 
 ### macOS / Linux (curl installer)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/educlopez/mallard/main/install.sh | bash
 ```
 
-Drops the binary into `~/.local/bin/duck-ai` (override with `DUCK_AI_INSTALL_DIR=/usr/local/bin`). Make sure `~/.local/bin` is on your `PATH`.
+Drops the binary into `~/.local/bin/mallard` (override with `MALLARD_INSTALL_DIR=/usr/local/bin`). Make sure `~/.local/bin` is on your `PATH`.
 
 Pin a specific version:
 
 ```bash
-DUCK_AI_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
+MALLARD_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/educlopez/mallard/main/install.sh | bash
 ```
 
 ### Windows (manual)
 
-Grab the latest zip from [Releases](https://github.com/educlopez/duck-ai/releases) (`duck-ai_<version>_windows_amd64.zip` or `_arm64.zip`), extract it, and move `duck-ai.exe` somewhere on your `PATH`. Or use WSL / Git Bash with the curl installer above.
+Grab the latest zip from [Releases](https://github.com/educlopez/mallard/releases) (`mallard_<version>_windows_amd64.zip` or `_arm64.zip`), extract it, and move `mallard.exe` somewhere on your `PATH`. Or use WSL / Git Bash with the curl installer above.
 
 ### After install
 
 ```bash
-duck-ai update    # install Claude/Codex/OpenCode skills + commands
-duck-ai doctor    # verify installation
-duck-ai           # launch interactive TUI
+mallard update    # install Claude/Codex/OpenCode skills + commands
+mallard doctor    # verify installation
+mallard           # launch interactive TUI
 ```
 
 ### CLI
 
 ```bash
-duck-ai                        # interactive TUI
-duck-ai install                # same as above
-duck-ai install --agent claude # install only to claude (non-interactive)
-duck-ai install --all          # install to all detected agents (non-interactive)
-duck-ai update                 # re-link skills/commands
-duck-ai doctor                 # check symlink health per agent
-duck-ai registry               # list installed skills/commands
-duck-ai version                # print version
+mallard                        # interactive TUI
+mallard install                # same as above
+mallard install --agent claude # install only to claude (non-interactive)
+mallard install --all          # install to all detected agents (non-interactive)
+mallard update                 # re-link skills/commands
+mallard doctor                 # check symlink health per agent
+mallard registry               # list installed skills/commands
+mallard version                # print version
 ```
 
 The binary auto-detects installed agents (claude, agents, codex, opencode) and
@@ -78,10 +78,10 @@ symlinks the appropriate skills/commands directories.
 ### From source
 
 ```bash
-git clone git@github.com:educlopez/duck-ai.git
-cd duck-ai
-go build -o duck-ai .
-./duck-ai update
+git clone git@github.com:educlopez/mallard.git
+cd mallard
+go build -o mallard .
+./mallard update
 ```
 
 ## Update
@@ -89,13 +89,13 @@ go build -o duck-ai .
 Re-run the curl-pipe installer to upgrade the binary, then re-link skills:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/educlopez/duck-ai/main/install.sh | bash
-duck-ai update             # re-link skills/commands (backs up conflicts)
+curl -fsSL https://raw.githubusercontent.com/educlopez/mallard/main/install.sh | bash
+mallard update             # re-link skills/commands (backs up conflicts)
 ```
 
-Windows: download the latest zip from [Releases](https://github.com/educlopez/duck-ai/releases) and replace `duck-ai.exe`.
+Windows: download the latest zip from [Releases](https://github.com/educlopez/mallard/releases) and replace `mallard.exe`.
 
-`duck-ai update --list-backups` and `duck-ai update --restore <ts>` recover prior state if anything went sideways.
+`mallard update --list-backups` and `mallard update --restore <ts>` recover prior state if anything went sideways.
 
 ## Skills
 

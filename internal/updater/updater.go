@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/educlopez/duck-ai/internal/agents"
-	"github.com/educlopez/duck-ai/internal/backup"
-	"github.com/educlopez/duck-ai/internal/skills"
+	"github.com/educlopez/mallard/internal/agents"
+	"github.com/educlopez/mallard/internal/backup"
+	"github.com/educlopez/mallard/internal/skills"
 )
 
 // Classification of a single target path during update planning.

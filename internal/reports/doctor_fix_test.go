@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/educlopez/duck-ai/internal/agents"
-	"github.com/educlopez/duck-ai/internal/skills"
+	"github.com/educlopez/mallard/internal/agents"
+	"github.com/educlopez/mallard/internal/skills"
 )
 
 func mkdir(t *testing.T, path string) {

@@ -2,11 +2,11 @@ package tui
 
 import "github.com/charmbracelet/lipgloss"
 
-// Rose Pine base palette + duck-ai yellow accents.
+// Rose Pine base palette + mallard yellow accents.
 //
 // The base/surface/text/subtext colors come straight from Rose Pine; the
 // accent colors replace gentle-ai's mauve/lavender with the rubber-duck
-// yellow ramp so the TUI feels on-brand for duck-ai.
+// yellow ramp so the TUI feels on-brand for mallard.
 var (
 	ColorBase    = lipgloss.Color("#191724")
 	ColorSurface = lipgloss.Color("#1f1d2e")
@@ -29,9 +29,9 @@ const Cursor = "▸ "
 // Tagline returns the welcome screen tagline with the given version.
 func Tagline(version string) string {
 	if version == "" {
-		return "duck-ai — multi-agent skill manager"
+		return "mallard — multi-agent skill manager"
 	}
-	return "duck-ai " + version + " — multi-agent skill manager"
+	return "mallard " + version + " — multi-agent skill manager"
 }
 
 // Pre-built reusable styles (mirror gentle-ai's exported style API).

@@ -2,7 +2,7 @@ package main
 
 import "embed"
 
-// embeddedSource bundles the duck-ai source tree (skills + claude commands)
+// embeddedSource bundles the mallard source tree (skills + claude commands)
 // directly into the binary so curl-pipe installs (which land the binary in
 // ~/.local/bin/ with no sibling repo) still have something to symlink from.
 //

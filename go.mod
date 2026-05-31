@@ -1,4 +1,4 @@
-module github.com/educlopez/duck-ai
+module github.com/educlopez/mallard
 
 go 1.24.2
 

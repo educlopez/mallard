@@ -17,7 +17,7 @@ func writeFile(t *testing.T, path, content string) {
 	}
 }
 
-// buildRepo builds a fake duck-ai repo tree in a temp dir and returns its root.
+// buildRepo builds a fake mallard repo tree in a temp dir and returns its root.
 func buildRepo(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()

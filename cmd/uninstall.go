@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/educlopez/duck-ai/internal/agents"
+	"github.com/educlopez/mallard/internal/agents"
 )
 
-// UninstallArgs captures parsed flags for `duck-ai uninstall`.
+// UninstallArgs captures parsed flags for `mallard uninstall`.
 type UninstallArgs struct {
 	AgentID string
 	All     bool
@@ -59,7 +59,7 @@ func ParseUninstallArgs(args []string) (UninstallArgs, error) {
 	return out, nil
 }
 
-// RunUninstall removes ONLY duck-ai-managed symlinks (those whose resolved
+// RunUninstall removes ONLY mallard-managed symlinks (those whose resolved
 // target points into repoRoot) from the detected agents' skills/commands/agents
 // directories. It is the mirror of install: real files/dirs and symlinks
 // pointing outside the repo are unmanaged and always left untouched.
@@ -111,9 +111,9 @@ func uninstall(w io.Writer, repoRoot string, adapters []agents.Adapter, dryRun b
 	}
 
 	if dryRun {
-		fmt.Fprintln(w, "\n  duck-ai uninstall (dry run) — no files were modified.")
+		fmt.Fprintln(w, "\n  mallard uninstall (dry run) — no files were modified.")
 	} else {
-		fmt.Fprintln(w, "\n  duck-ai uninstall")
+		fmt.Fprintln(w, "\n  mallard uninstall")
 	}
 
 	if len(adapters) == 0 {
@@ -153,7 +153,7 @@ func uninstall(w io.Writer, repoRoot string, adapters []agents.Adapter, dryRun b
 	return nil
 }
 
-// unlinkManagedInDir scans dir one level deep and removes every duck-ai-managed
+// unlinkManagedInDir scans dir one level deep and removes every mallard-managed
 // symlink (one resolving to a target inside repoRoot). It returns the count
 // removed and the count of unmanaged entries left in place. Hidden entries are
 // skipped. With dryRun set it reports but does not remove.

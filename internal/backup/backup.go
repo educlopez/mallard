@@ -28,7 +28,7 @@ const pinMarker = ".pinned"
 const archiveName = "archive.tar.gz"
 
 // Entry describes a single file or directory that was backed up before being
-// overwritten by duck-ai.
+// overwritten by mallard.
 type Entry struct {
 	Agent        string `json:"agent"`
 	Kind         string `json:"kind"`
@@ -56,7 +56,7 @@ type Session struct {
 	entries []Entry
 }
 
-// NewSession opens (lazily) a new backup session under ~/.duck-ai/backups/<RFC3339>.
+// NewSession opens (lazily) a new backup session under ~/.mallard/backups/<RFC3339>.
 // The directory is NOT created until the first Snapshot call.
 func NewSession() (*Session, error) {
 	home, err := os.UserHomeDir()
@@ -64,7 +64,7 @@ func NewSession() (*Session, error) {
 		return nil, fmt.Errorf("home dir: %w", err)
 	}
 	stamp := time.Now().UTC().Format("20060102T150405Z")
-	root := filepath.Join(home, ".duck-ai", "backups", stamp)
+	root := filepath.Join(home, ".mallard", "backups", stamp)
 	return &Session{rootDir: root, stamp: stamp}, nil
 }
 
@@ -395,7 +395,7 @@ func BackupsRoot() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("home dir: %w", err)
 	}
-	return filepath.Join(home, ".duck-ai", "backups"), nil
+	return filepath.Join(home, ".mallard", "backups"), nil
 }
 
 // Summary describes a single backup batch on disk.
@@ -408,7 +408,7 @@ type Summary struct {
 	Pinned     bool
 }
 
-// ListBackups returns every backup batch under ~/.duck-ai/backups, newest first.
+// ListBackups returns every backup batch under ~/.mallard/backups, newest first.
 func ListBackups() ([]Summary, error) {
 	root, err := BackupsRoot()
 	if err != nil {
@@ -530,7 +530,7 @@ type RestoreClass string
 
 const (
 	RestoreRestore RestoreClass = "restore" // copy backup over the target
-	RestoreRelink  RestoreClass = "relink"  // target is a duck-ai symlink; safe to drop
+	RestoreRelink  RestoreClass = "relink"  // target is a mallard symlink; safe to drop
 	RestoreSkip    RestoreClass = "skip"    // target was modified by user; refuse to clobber
 	RestoreFailed  RestoreClass = "failed"  // restore attempted but failed (sha mismatch, IO)
 )

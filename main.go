@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/educlopez/duck-ai/cmd"
-	"github.com/educlopez/duck-ai/internal/agents"
+	"github.com/educlopez/mallard/cmd"
+	"github.com/educlopez/mallard/internal/agents"
 )
 
-// version is the duck-ai release version.
+// version is the mallard release version.
 // "dev" is overridden at build time by goreleaser via:
 //
 //	-ldflags "-X main.version={{.Version}}"
@@ -90,7 +90,7 @@ func main() {
 		}
 
 	case "version", "--version", "-v":
-		fmt.Printf("duck-ai %s\n", version)
+		fmt.Printf("mallard %s\n", version)
 
 	case "help", "--help", "-h":
 		printHelp()
@@ -142,17 +142,17 @@ func handleInstall(repoRoot string, args []string, version string) error {
 	return cmd.RunInstallTUI(repoRoot, version)
 }
 
-// repoRootFromEnvOrBinary resolves the duck-ai repo root.
+// repoRootFromEnvOrBinary resolves the mallard repo root.
 //
 // Priority:
-//  1. DUCK_AI_DIR env var (explicit override)
+//  1. MALLARD_DIR env var (explicit override)
 //  2. Walk up from the binary looking for a skills/ sibling (dev mode:
-//     running `go run .` or `./duck-ai` from the cloned repo)
-//  3. Materialize the embedded source tree into ~/.duck-ai/source/<version>/
+//     running `go run .` or `./mallard` from the cloned repo)
+//  3. Materialize the embedded source tree into ~/.mallard/source/<version>/
 //     (release mode: binary installed via curl-pipe with no sibling repo)
 //  4. Fallback to cwd if all of the above fail
 func repoRootFromEnvOrBinary(version string) string {
-	if dir := os.Getenv("DUCK_AI_DIR"); dir != "" {
+	if dir := os.Getenv("MALLARD_DIR"); dir != "" {
 		return dir
 	}
 	if exe, err := os.Executable(); err == nil {
@@ -181,41 +181,41 @@ func repoRootFromEnvOrBinary(version string) string {
 }
 
 func printHelp() {
-	fmt.Print(`duck-ai — personal Claude Code toolkit
+	fmt.Print(`mallard — personal Claude Code toolkit
 
 Usage:
-  duck-ai                        Launch interactive TUI installer
-  duck-ai install                Launch interactive TUI installer
-  duck-ai install --agent NAME   Install only to NAME (claude|agents|codex|opencode)
-  duck-ai install --all          Install to all detected agents non-interactively
-  duck-ai install --scope SCOPE  Link into global (default) or workspace (<cwd>/.claude) dirs
-  duck-ai update                 Re-link skills/commands, backing up any conflicting files
-  duck-ai update --dry-run       Show what update would change without touching disk
-  duck-ai update --agent NAME    Update only NAME
-  duck-ai update --yes           Skip confirmation prompts
-  duck-ai update --scope SCOPE   Operate on global (default) or workspace (<cwd>/.claude) dirs
-  duck-ai update --list-backups  List backup batches under ~/.duck-ai/backups
-  duck-ai update --restore TS    Restore files from backup TS (full stamp or unique prefix)
-  duck-ai update --pin-backup TS Pin backup TS so it is never pruned by the keep-latest GC
-  duck-ai uninstall              Remove duck-ai-managed symlinks from all detected agents
-  duck-ai uninstall --agent NAME Remove managed symlinks from NAME only
-  duck-ai uninstall --all        Remove managed symlinks from all detected agents
-  duck-ai uninstall --dry-run    Show what would be removed without touching disk
-  duck-ai uninstall --scope SCOPE Remove from global (default) or workspace (<cwd>/.claude) dirs
-  duck-ai upgrade                Self-update the duck-ai binary to the latest release
-  duck-ai upgrade --check        Report whether a newer release is available
-  duck-ai upgrade --dry-run      Show what upgrade would download/replace
-  duck-ai upgrade --force        Upgrade even on a dev build or non-newer release
-  duck-ai doctor                 Check symlink health per detected agent
-  duck-ai doctor --fix           Repair broken/missing duck-ai-managed links only
-  duck-ai doctor --scope SCOPE   Check global (default) or workspace (<cwd>/.claude) dirs
-  duck-ai registry               List skills/commands with versions per agent
-  duck-ai registry --source      List source entries from the repo
-  duck-ai registry --json        Emit machine-readable JSON
-  duck-ai version                Print version
+  mallard                        Launch interactive TUI installer
+  mallard install                Launch interactive TUI installer
+  mallard install --agent NAME   Install only to NAME (claude|agents|codex|opencode)
+  mallard install --all          Install to all detected agents non-interactively
+  mallard install --scope SCOPE  Link into global (default) or workspace (<cwd>/.claude) dirs
+  mallard update                 Re-link skills/commands, backing up any conflicting files
+  mallard update --dry-run       Show what update would change without touching disk
+  mallard update --agent NAME    Update only NAME
+  mallard update --yes           Skip confirmation prompts
+  mallard update --scope SCOPE   Operate on global (default) or workspace (<cwd>/.claude) dirs
+  mallard update --list-backups  List backup batches under ~/.mallard/backups
+  mallard update --restore TS    Restore files from backup TS (full stamp or unique prefix)
+  mallard update --pin-backup TS Pin backup TS so it is never pruned by the keep-latest GC
+  mallard uninstall              Remove mallard-managed symlinks from all detected agents
+  mallard uninstall --agent NAME Remove managed symlinks from NAME only
+  mallard uninstall --all        Remove managed symlinks from all detected agents
+  mallard uninstall --dry-run    Show what would be removed without touching disk
+  mallard uninstall --scope SCOPE Remove from global (default) or workspace (<cwd>/.claude) dirs
+  mallard upgrade                Self-update the mallard binary to the latest release
+  mallard upgrade --check        Report whether a newer release is available
+  mallard upgrade --dry-run      Show what upgrade would download/replace
+  mallard upgrade --force        Upgrade even on a dev build or non-newer release
+  mallard doctor                 Check symlink health per detected agent
+  mallard doctor --fix           Repair broken/missing mallard-managed links only
+  mallard doctor --scope SCOPE   Check global (default) or workspace (<cwd>/.claude) dirs
+  mallard registry               List skills/commands with versions per agent
+  mallard registry --source      List source entries from the repo
+  mallard registry --json        Emit machine-readable JSON
+  mallard version                Print version
 
 Environment:
-  DUCK_AI_DIR              Override repo root (defaults to binary location)
-  DUCK_AI_NO_SELF_UPDATE   Set to 1 to disable 'duck-ai upgrade' self-replace
+  MALLARD_DIR              Override repo root (defaults to binary location)
+  MALLARD_NO_SELF_UPDATE   Set to 1 to disable 'mallard upgrade' self-replace
 `)
 }

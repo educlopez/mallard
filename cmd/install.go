@@ -5,9 +5,9 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/educlopez/duck-ai/internal/agents"
-	"github.com/educlopez/duck-ai/internal/skills"
-	"github.com/educlopez/duck-ai/internal/tui"
+	"github.com/educlopez/mallard/internal/agents"
+	"github.com/educlopez/mallard/internal/skills"
+	"github.com/educlopez/mallard/internal/tui"
 )
 
 func RunInstallTUI(repoRoot, version string) error {

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/educlopez/duck-ai/internal/agents"
+	"github.com/educlopez/mallard/internal/agents"
 )
 
 func TestParseFrontmatter(t *testing.T) {

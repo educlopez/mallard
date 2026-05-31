@@ -8,12 +8,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/educlopez/duck-ai/internal/agents"
-	"github.com/educlopez/duck-ai/internal/backup"
-	"github.com/educlopez/duck-ai/internal/updater"
+	"github.com/educlopez/mallard/internal/agents"
+	"github.com/educlopez/mallard/internal/backup"
+	"github.com/educlopez/mallard/internal/updater"
 )
 
-// UpdateArgs captures parsed flags for `duck-ai update`.
+// UpdateArgs captures parsed flags for `mallard update`.
 type UpdateArgs struct {
 	DryRun      bool
 	AgentID     string
@@ -46,9 +46,9 @@ func RunUpdate(repoRoot string, args UpdateArgs) error {
 	}
 
 	if rpt.DryRun {
-		fmt.Println("\n  duck-ai update (dry run) — no files were modified.")
+		fmt.Println("\n  mallard update (dry run) — no files were modified.")
 	} else {
-		fmt.Println("\n  duck-ai update")
+		fmt.Println("\n  mallard update")
 	}
 
 	if len(rpt.Agents) == 0 {
@@ -81,7 +81,7 @@ func runListBackups() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("\n  duck-ai backups")
+	fmt.Println("\n  mallard backups")
 	if len(summaries) == 0 {
 		fmt.Println("  (no backups found)")
 		return nil
@@ -140,9 +140,9 @@ func runRestore(args UpdateArgs) error {
 	}
 
 	if args.DryRun {
-		fmt.Printf("\n  duck-ai restore (dry run) — backup %s\n", stamp)
+		fmt.Printf("\n  mallard restore (dry run) — backup %s\n", stamp)
 	} else {
-		fmt.Printf("\n  duck-ai restore — backup %s\n", stamp)
+		fmt.Printf("\n  mallard restore — backup %s\n", stamp)
 	}
 
 	printRestorePlan(items)

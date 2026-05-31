@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/educlopez/duck-ai/internal/reports"
+	"github.com/educlopez/mallard/internal/reports"
 )
 
 // RegistryArgs is a thin alias of the renderer's args type, kept here so

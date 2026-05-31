@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/educlopez/duck-ai/internal/agents"
-	"github.com/educlopez/duck-ai/internal/reports"
+	"github.com/educlopez/mallard/internal/agents"
+	"github.com/educlopez/mallard/internal/reports"
 )
 
 // DoctorArgs holds parsed flags for the doctor command.
@@ -39,7 +39,7 @@ func ParseDoctorArgs(args []string) (DoctorArgs, error) {
 }
 
 // RunDoctor prints the doctor report to stdout. With Fix set, it conservatively
-// repairs broken/missing duck-ai-managed symlinks instead of just reporting.
+// repairs broken/missing mallard-managed symlinks instead of just reporting.
 // The TUI calls reports.Doctor directly with a captured writer.
 func RunDoctor(repoRoot string, args DoctorArgs) error {
 	scope := args.Scope

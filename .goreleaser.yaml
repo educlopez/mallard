@@ -1,6 +1,6 @@
 version: 2
 
-project_name: duck-ai
+project_name: mallard
 
 before:
   hooks:
@@ -8,7 +8,7 @@ before:
 
 builds:
   - main: .
-    binary: duck-ai
+    binary: mallard
     env:
       - CGO_ENABLED=0
     goos:
@@ -68,19 +68,19 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    name: duck-ai
-    homepage: "https://github.com/educlopez/duck-ai"
+    name: mallard
+    homepage: "https://github.com/educlopez/mallard"
     description: "Claude Code toolkit for PrestaShop development — skills, commands, and agents."
     license: "MIT"
-    commit_msg_template: "chore: update duck-ai formula to {{ .Tag }}"
+    commit_msg_template: "chore: update mallard formula to {{ .Tag }}"
 
 scoops:
   - repository:
       owner: educlopez
       name: scoop-bucket
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    name: duck-ai
-    homepage: "https://github.com/educlopez/duck-ai"
+    name: mallard
+    homepage: "https://github.com/educlopez/mallard"
     description: "Claude Code toolkit for PrestaShop development — skills, commands, and agents."
     license: MIT
-    commit_msg_template: "chore: update duck-ai to {{ .Tag }}"
+    commit_msg_template: "chore: update mallard to {{ .Tag }}"

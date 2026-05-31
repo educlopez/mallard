@@ -6,8 +6,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/educlopez/duck-ai/internal/agents"
-	"github.com/educlopez/duck-ai/internal/skillregistry"
+	"github.com/educlopez/mallard/internal/agents"
+	"github.com/educlopez/mallard/internal/skillregistry"
 )
 
 // RegistryArgs mirrors cmd.RegistryArgs so callers can pass flag state into
@@ -19,7 +19,7 @@ type RegistryArgs struct {
 	Help   bool
 }
 
-// ParseRegistryArgs parses the same flags accepted by `duck-ai registry`.
+// ParseRegistryArgs parses the same flags accepted by `mallard registry`.
 // Kept here so the TUI can also build args without depending on cmd.
 func ParseRegistryArgs(args []string) (RegistryArgs, error) {
 	var out RegistryArgs
@@ -42,7 +42,7 @@ func ParseRegistryArgs(args []string) (RegistryArgs, error) {
 	return out, nil
 }
 
-// Registry writes the duck-ai registry report to w.
+// Registry writes the mallard registry report to w.
 func Registry(w io.Writer, repoRoot string, args RegistryArgs) error {
 	if args.Help {
 		PrintRegistryHelp(w)
@@ -76,7 +76,7 @@ func Registry(w io.Writer, repoRoot string, args RegistryArgs) error {
 	}
 
 	// Default behavior: filter out orphan/unversioned entries so only
-	// duck-ai-managed entries are shown. --all disables the filter.
+	// mallard-managed entries are shown. --all disables the filter.
 	if !args.All {
 		filtered := map[string][]skillregistry.Manifest{}
 		for id, ms := range installed {
@@ -105,7 +105,7 @@ func Registry(w io.Writer, repoRoot string, args RegistryArgs) error {
 }
 
 func printSourceText(w io.Writer, source []skillregistry.Manifest) error {
-	fmt.Fprintln(w, "\n  duck-ai registry — source")
+	fmt.Fprintln(w, "\n  mallard registry — source")
 	skills, commands, agentDefs := splitByKind(source)
 	if len(skills) > 0 {
 		fmt.Fprintln(w, "    skills:")
@@ -129,7 +129,7 @@ func printSourceText(w io.Writer, source []skillregistry.Manifest) error {
 }
 
 func printInstalledText(w io.Writer, sourceVersions map[string]string, installed map[string][]skillregistry.Manifest) error {
-	fmt.Fprintln(w, "\nduck-ai registry")
+	fmt.Fprintln(w, "\nmallard registry")
 
 	if len(installed) == 0 {
 		fmt.Fprintln(w, "  No agents detected.")
@@ -193,7 +193,7 @@ func versionLabel(v string) string {
 	return "v" + v
 }
 
-// isManaged reports whether an installed manifest corresponds to a duck-ai
+// isManaged reports whether an installed manifest corresponds to a mallard
 // source entry (matched by kind + name).
 func isManaged(m skillregistry.Manifest, sourceVersions map[string]string) bool {
 	if m.Version == "" {
@@ -222,17 +222,17 @@ func statusFor(m skillregistry.Manifest, sourceVersions map[string]string) strin
 
 // PrintRegistryHelp writes the registry --help text to w.
 func PrintRegistryHelp(w io.Writer) {
-	fmt.Fprint(w, `duck-ai registry — list installed skills/commands per agent
+	fmt.Fprint(w, `mallard registry — list installed skills/commands per agent
 
 Usage:
-  duck-ai registry             Show only duck-ai-managed entries (default)
-  duck-ai registry --all       Show every entry, including orphans and
+  mallard registry             Show only mallard-managed entries (default)
+  mallard registry --all       Show every entry, including orphans and
                                unversioned items from other tooling
-  duck-ai registry --source    List source entries from the duck-ai repo
-  duck-ai registry --json      Emit machine-readable JSON (respects --all)
-  duck-ai registry --help      Show this help
+  mallard registry --source    List source entries from the mallard repo
+  mallard registry --json      Emit machine-readable JSON (respects --all)
+  mallard registry --help      Show this help
 
-By default, only entries that match a duck-ai source skill/command by name
+By default, only entries that match a mallard source skill/command by name
 are shown. Use --all to include orphan and unversioned entries written by
 other tooling.
 `)

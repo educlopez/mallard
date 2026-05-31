@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// Skill represents a single duck-ai skill or command.
+// Skill represents a single mallard skill or command.
 type Skill struct {
 	Name    string // directory/file name
 	SrcPath string // absolute source path

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/educlopez/duck-ai/internal/update"
+	"github.com/educlopez/mallard/internal/update"
 )
 
-// UpgradeArgs captures parsed flags for `duck-ai upgrade`.
+// UpgradeArgs captures parsed flags for `mallard upgrade`.
 type UpgradeArgs struct {
 	Force  bool
 	Check  bool
@@ -38,10 +38,10 @@ func ParseUpgradeArgs(args []string) (UpgradeArgs, error) {
 	return out, nil
 }
 
-// RunUpgrade self-updates the duck-ai binary to the latest GitHub release.
+// RunUpgrade self-updates the mallard binary to the latest GitHub release.
 // currentVersion comes from main's version var.
 func RunUpgrade(currentVersion string, args UpgradeArgs) error {
-	fmt.Println("\n  duck-ai upgrade")
+	fmt.Println("\n  mallard upgrade")
 	return update.Run(os.Stdout, update.Options{
 		CurrentVersion: currentVersion,
 		Force:          args.Force,
