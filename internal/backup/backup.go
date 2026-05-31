@@ -27,6 +27,14 @@ const pinMarker = ".pinned"
 // batch. It mirrors the raw files and allows compressed round-trip restore.
 const archiveName = "archive.tar.gz"
 
+// casDirName is the content-addressed store directory under BackupsRoot. It
+// holds one copy of each distinct file content keyed by SHA-256. Backup batches
+// reference content here via hardlinks, so identical files snapshotted across
+// many sessions occupy a single inode on disk (dedup) while each batch path
+// still restores byte-identically. The leading underscore keeps it sorted
+// before timestamped batch dirs and excluded from batch enumeration.
+const casDirName = "_cas"
+
 // Entry describes a single file or directory that was backed up before being
 // overwritten by mallard.
 type Entry struct {
@@ -54,6 +62,22 @@ type Session struct {
 	rootDir string
 	stamp   string
 	entries []Entry
+
+	// dedupHits / dedupMisses count, for the lifetime of the session, how many
+	// snapshotted regular files matched content already present in the CAS
+	// (hits) versus how many had to be freshly stored (misses). Used by tests
+	// and informational only.
+	dedupHits   int
+	dedupMisses int
+}
+
+// DedupStats reports content-addressed dedup activity for this session: hits
+// (file content already present in the store, not re-stored) and misses
+// (content stored for the first time).
+func (s *Session) DedupStats() (hits, misses int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.dedupHits, s.dedupMisses
 }
 
 // NewSession opens (lazily) a new backup session under ~/.mallard/backups/<RFC3339>.
@@ -127,15 +151,78 @@ func (s *Session) Snapshot(agentID, kind, originalPath string) (Entry, error) {
 		}
 
 	default:
-		sum, err := copyFile(originalPath, dst)
+		sum, hit, err := s.storeDeduped(originalPath, dst)
 		if err != nil {
 			return Entry{}, err
 		}
 		entry.Sha256 = sum
+		if hit {
+			s.dedupHits++
+		} else {
+			s.dedupMisses++
+		}
 	}
 
 	s.entries = append(s.entries, entry)
 	return entry, nil
+}
+
+// storeDeduped content-addresses the regular file at src into the shared CAS
+// (under BackupsRoot/_cas/<sha>) and links the batch destination dst to it.
+//
+// On a dedup HIT (content already in the CAS) no second copy of the bytes is
+// written: dst becomes a hardlink to the existing CAS object. On a MISS the
+// content is copied into the CAS once, then dst is hardlinked to it. If
+// hardlinking is unsupported (e.g. cross-device or a filesystem without link
+// support) it falls back to a plain copy so the batch dir is always usable for
+// restore. Returns the content SHA-256 and whether it was a dedup hit.
+func (s *Session) storeDeduped(src, dst string) (sum string, hit bool, err error) {
+	sum, err = hashFile(src)
+	if err != nil {
+		return "", false, err
+	}
+
+	casDir := filepath.Join(filepath.Dir(s.rootDir), casDirName)
+	if err := os.MkdirAll(casDir, 0o755); err != nil {
+		return "", false, fmt.Errorf("mkdir cas: %w", err)
+	}
+	casPath := filepath.Join(casDir, sum)
+
+	if _, statErr := os.Stat(casPath); statErr == nil {
+		hit = true // content already stored — reference it, do not re-store.
+	} else if os.IsNotExist(statErr) {
+		if _, cerr := copyFile(src, casPath); cerr != nil {
+			return "", false, cerr
+		}
+	} else {
+		return "", false, fmt.Errorf("stat cas object: %w", statErr)
+	}
+
+	// Link the batch destination to the CAS object so identical content shares
+	// one inode. Remove any stale dst first so the link call is deterministic.
+	_ = os.Remove(dst)
+	if lerr := os.Link(casPath, dst); lerr != nil {
+		// Hardlinks may be unavailable; fall back to a plain copy of the CAS
+		// object so restore still works (dedup is lost only for this entry).
+		if _, cerr := copyFile(casPath, dst); cerr != nil {
+			return "", false, cerr
+		}
+	}
+	return sum, hit, nil
+}
+
+// hashFile returns the hex SHA-256 of the file at path without copying it.
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("open %s: %w", path, err)
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", fmt.Errorf("hash %s: %w", path, err)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // Finalize writes manifest.json and runs the keep-latest-5 garbage collector.
@@ -424,7 +511,7 @@ func ListBackups() ([]Summary, error) {
 
 	var stamps []string
 	for _, e := range entries {
-		if e.IsDir() {
+		if e.IsDir() && e.Name() != casDirName {
 			stamps = append(stamps, e.Name())
 		}
 	}
@@ -491,7 +578,7 @@ func ResolveTimestamp(prefix string) (string, error) {
 
 	var matches []string
 	for _, e := range entries {
-		if !e.IsDir() {
+		if !e.IsDir() || e.Name() == casDirName {
 			continue
 		}
 		if e.Name() == prefix {
@@ -665,7 +752,7 @@ func gcOldBackups(parent string, keep int) error {
 	}
 	var unpinned []string
 	for _, e := range entries {
-		if !e.IsDir() {
+		if !e.IsDir() || e.Name() == casDirName {
 			continue
 		}
 		if IsPinned(filepath.Join(parent, e.Name())) {
@@ -673,12 +760,36 @@ func gcOldBackups(parent string, keep int) error {
 		}
 		unpinned = append(unpinned, e.Name())
 	}
-	if len(unpinned) <= keep {
-		return nil
+	if len(unpinned) > keep {
+		sort.Strings(unpinned)
+		for _, d := range unpinned[:len(unpinned)-keep] {
+			_ = os.RemoveAll(filepath.Join(parent, d))
+		}
 	}
-	sort.Strings(unpinned)
-	for _, d := range unpinned[:len(unpinned)-keep] {
-		_ = os.RemoveAll(filepath.Join(parent, d))
-	}
+
+	// Reap orphaned content-addressed objects. After batch dirs are removed,
+	// any CAS object no longer hardlinked from a surviving batch has a link
+	// count of 1 (only the CAS entry itself) and is safe to delete. This keeps
+	// the store bounded as old batches age out.
+	gcOrphanedCAS(filepath.Join(parent, casDirName))
 	return nil
+}
+
+// gcOrphanedCAS deletes CAS objects whose only remaining hardlink is the CAS
+// entry itself (link count <= 1), meaning no live backup batch references them.
+// Best-effort: errors are ignored so GC never fails on an unreadable object.
+func gcOrphanedCAS(casDir string) {
+	entries, err := os.ReadDir(casDir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		path := filepath.Join(casDir, e.Name())
+		if nlink(path) <= 1 {
+			_ = os.Remove(path)
+		}
+	}
 }

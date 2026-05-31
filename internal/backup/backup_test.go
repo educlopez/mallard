@@ -115,6 +115,150 @@ func TestSessionFinalizeWritesArchive(t *testing.T) {
 	}
 }
 
+// snapshotInto runs a single-file backup session rooted at the given home and
+// returns the session so callers can inspect dedup stats and the batch root.
+func snapshotInto(t *testing.T, home, orig string) *Session {
+	t.Helper()
+	t.Setenv("HOME", home)
+	s, err := NewSession()
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+	if _, err := s.Snapshot("claude", "skills", orig); err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	if err := s.Finalize(); err != nil {
+		t.Fatalf("Finalize: %v", err)
+	}
+	return s
+}
+
+// TestDedupHitAndMiss verifies that identical content snapshotted across two
+// sessions is stored once in the CAS (a hit, no second copy of the bytes),
+// while distinct content is stored fresh (a miss).
+func TestDedupHitAndMiss(t *testing.T) {
+	tests := []struct {
+		name        string
+		first       string
+		second      string
+		wantHit     bool
+		wantCASObjs int
+	}{
+		{name: "identical content dedups", first: "same-bytes", second: "same-bytes", wantHit: true, wantCASObjs: 1},
+		{name: "distinct content stored twice", first: "alpha", second: "beta", wantHit: false, wantCASObjs: 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+
+			origA := filepath.Join(t.TempDir(), "a.json")
+			write(t, origA, tt.first)
+			s1 := snapshotInto(t, home, origA)
+			if h, m := s1.DedupStats(); h != 0 || m != 1 {
+				t.Fatalf("first session dedup hits=%d misses=%d, want 0/1", h, m)
+			}
+
+			origB := filepath.Join(t.TempDir(), "b.json")
+			write(t, origB, tt.second)
+			s2 := snapshotInto(t, home, origB)
+			h, m := s2.DedupStats()
+			if tt.wantHit && (h != 1 || m != 0) {
+				t.Fatalf("second session dedup hits=%d misses=%d, want 1/0 (hit)", h, m)
+			}
+			if !tt.wantHit && (h != 0 || m != 1) {
+				t.Fatalf("second session dedup hits=%d misses=%d, want 0/1 (miss)", h, m)
+			}
+
+			// Count distinct CAS objects on disk.
+			casDir := filepath.Join(filepath.Dir(s2.Root()), casDirName)
+			objs, rerr := os.ReadDir(casDir)
+			if rerr != nil {
+				t.Fatalf("read cas dir: %v", rerr)
+			}
+			if len(objs) != tt.wantCASObjs {
+				t.Fatalf("CAS objects = %d, want %d", len(objs), tt.wantCASObjs)
+			}
+		})
+	}
+}
+
+// TestDedupRestoreByteIdentical asserts a deduplicated backup still restores
+// the exact original bytes (the batch path is a hardlink to the CAS object).
+func TestDedupRestoreByteIdentical(t *testing.T) {
+	home := t.TempDir()
+
+	origA := filepath.Join(t.TempDir(), "first.json")
+	write(t, origA, "shared-content")
+	snapshotInto(t, home, origA)
+
+	// Second session backs up identical content (dedup hit), then we restore it.
+	origB := filepath.Join(t.TempDir(), "second.json")
+	write(t, origB, "shared-content")
+	s2 := snapshotInto(t, home, origB)
+	if h, _ := s2.DedupStats(); h != 1 {
+		t.Fatalf("expected dedup hit on second session")
+	}
+
+	m, err := LoadManifest(s2.Root())
+	if err != nil {
+		t.Fatalf("LoadManifest: %v", err)
+	}
+
+	if err := os.Remove(origB); err != nil {
+		t.Fatalf("remove orig: %v", err)
+	}
+	results := ApplyRestore(PlanRestore(m, ""))
+	if len(results) != 1 || results[0].Class != RestoreRestore {
+		t.Fatalf("restore result = %+v", results)
+	}
+	got, err := os.ReadFile(origB)
+	if err != nil {
+		t.Fatalf("read restored: %v", err)
+	}
+	if string(got) != "shared-content" {
+		t.Fatalf("restored = %q, want shared-content", string(got))
+	}
+}
+
+// TestDedupGCReapsOrphanedCAS verifies CAS objects whose referencing batches
+// are pruned by GC get reaped, while content still referenced by a surviving
+// batch is retained.
+func TestDedupGCReapsOrphanedCAS(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	root, err := BackupsRoot()
+	if err != nil {
+		t.Fatalf("BackupsRoot: %v", err)
+	}
+	casDir := filepath.Join(root, casDirName)
+
+	// Create one referenced CAS object via a real session, plus one orphan.
+	orig := filepath.Join(t.TempDir(), "live.json")
+	write(t, orig, "live-content")
+	snapshotInto(t, home, orig)
+
+	// Plant an orphan CAS object with no batch referencing it (link count 1).
+	if err := os.MkdirAll(casDir, 0o755); err != nil {
+		t.Fatalf("mkdir cas: %v", err)
+	}
+	orphan := filepath.Join(casDir, "deadbeef")
+	if err := os.WriteFile(orphan, []byte("orphan"), 0o644); err != nil {
+		t.Fatalf("write orphan: %v", err)
+	}
+
+	gcOrphanedCAS(casDir)
+
+	if exists(orphan) {
+		t.Fatalf("orphaned CAS object was not reaped")
+	}
+	// The live object (hardlinked from the surviving batch) must remain.
+	objs, _ := os.ReadDir(casDir)
+	if len(objs) != 1 {
+		t.Fatalf("CAS objects after reap = %d, want 1 (the live one)", len(objs))
+	}
+}
+
 // TestPinSurvivesGC asserts a pinned batch is never pruned while unpinned
 // batches beyond keep-5 are removed.
 func TestPinSurvivesGC(t *testing.T) {

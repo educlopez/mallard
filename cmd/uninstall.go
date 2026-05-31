@@ -90,7 +90,7 @@ func selectUninstallAgents(args UninstallArgs) ([]agents.Adapter, error) {
 	if args.AgentID != "" {
 		a, ok := agents.ByID(args.AgentID)
 		if !ok {
-			return nil, fmt.Errorf("unknown agent %q (supported: claude, codex, opencode, agents)", args.AgentID)
+			return nil, fmt.Errorf("unknown agent %q (supported: claude, codex, opencode, agents, gemini, cursor, windsurf)", args.AgentID)
 		}
 		return []agents.Adapter{a}, nil
 	}

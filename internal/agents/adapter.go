@@ -5,6 +5,9 @@ const (
 	IDCodex    = "codex"
 	IDOpenCode = "opencode"
 	IDAgents   = "agents"
+	IDGemini   = "gemini"
+	IDCursor   = "cursor"
+	IDWindsurf = "windsurf"
 )
 
 // Scope selects where skills/commands/agents are linked.

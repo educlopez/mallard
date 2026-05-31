@@ -11,6 +11,7 @@ import (
 	"github.com/educlopez/mallard/internal/agents"
 	"github.com/educlopez/mallard/internal/reports"
 	"github.com/educlopez/mallard/internal/skills"
+	"github.com/educlopez/mallard/internal/state"
 	"github.com/educlopez/mallard/internal/updater"
 )
 
@@ -73,6 +74,10 @@ type Model struct {
 	scrollErr    error
 	scrollTitle  string
 
+	// Persisted state loaded on start. Used to pre-select agents/skills that
+	// match the user's last run and to persist the new selection on install.
+	prevState state.State
+
 	// Terminal size
 	width  int
 	height int
@@ -85,9 +90,26 @@ type Model struct {
 // an empty string to hide the version suffix.
 func New(repoRoot, version string) Model {
 	detected := agents.Detected()
+
+	// Load persisted selections. Load never errors (missing/corrupt → defaults),
+	// so it can never block startup.
+	prev := state.Load()
+
+	// Pre-select agents from the last run if any were persisted; otherwise
+	// default to all detected agents selected.
 	agentSelected := make([]bool, len(detected))
-	for i := range agentSelected {
-		agentSelected[i] = true
+	if len(prev.LastAgents) > 0 {
+		want := make(map[string]struct{}, len(prev.LastAgents))
+		for _, id := range prev.LastAgents {
+			want[id] = struct{}{}
+		}
+		for i, a := range detected {
+			_, agentSelected[i] = want[a.ID()]
+		}
+	} else {
+		for i := range agentSelected {
+			agentSelected[i] = true
+		}
 	}
 
 	return Model{
@@ -96,6 +118,7 @@ func New(repoRoot, version string) Model {
 		version:       version,
 		allAgents:     detected,
 		agentSelected: agentSelected,
+		prevState:     prev,
 	}
 }
 
@@ -415,8 +438,18 @@ func (m Model) loadSkillsScreen() (tea.Model, tea.Cmd) {
 	m.allCommands = c
 	m.allAgentDefs = ag
 	m.skillSelected = make([]bool, len(s))
-	for i := range m.skillSelected {
-		m.skillSelected[i] = true
+	if len(m.prevState.LastSkills) > 0 {
+		want := make(map[string]struct{}, len(m.prevState.LastSkills))
+		for _, name := range m.prevState.LastSkills {
+			want[name] = struct{}{}
+		}
+		for i, sk := range s {
+			_, m.skillSelected[i] = want[sk.Name]
+		}
+	} else {
+		for i := range m.skillSelected {
+			m.skillSelected[i] = true
+		}
 	}
 	m.screen = screenSkills
 	return m, nil
@@ -474,6 +507,11 @@ func (m Model) runInstall() tea.Cmd {
 			}
 		}
 
+		// Persist the selection so the next run pre-selects the same agents and
+		// skills. A failed save must never block the install, so the error is
+		// intentionally ignored.
+		persistSelection(selectedAgents, selectedSkills)
+
 		for _, agent := range selectedAgents {
 			if !agent.Detect() {
 				continue
@@ -503,6 +541,21 @@ func (m Model) runInstall() tea.Cmd {
 
 		return installDoneMsg{results: results}
 	}
+}
+
+// persistSelection writes the chosen agents and skills to ~/.mallard/state.json
+// so the next TUI run pre-selects them. Errors are swallowed: persistence is a
+// convenience and must never interfere with the install itself.
+func persistSelection(selectedAgents []agents.Adapter, selectedSkills []skills.Skill) {
+	agentIDs := make([]string, 0, len(selectedAgents))
+	for _, a := range selectedAgents {
+		agentIDs = append(agentIDs, a.ID())
+	}
+	skillNames := make([]string, 0, len(selectedSkills))
+	for _, s := range selectedSkills {
+		skillNames = append(skillNames, s.Name)
+	}
+	_ = state.Save(state.State{LastAgents: agentIDs, LastSkills: skillNames})
 }
 
 // -- View --
@@ -558,7 +611,7 @@ func (m Model) viewAgents() string {
 	b.WriteString(styleAccent.Render("  Detected agents\n\n"))
 
 	if len(m.allAgents) == 0 {
-		b.WriteString(styleError.Render("  No agents detected. Install claude, codex, agents, or opencode first.\n"))
+		b.WriteString(styleError.Render("  No agents detected. Install claude, codex, opencode, agents, gemini, cursor, or windsurf first.\n"))
 		return b.String()
 	}
 

@@ -20,7 +20,7 @@ func RunInstallTUI(repoRoot, version string) error {
 func RunInstallAgent(repoRoot, agentID string, scope agents.Scope) error {
 	a, ok := agents.ByID(agentID)
 	if !ok {
-		return fmt.Errorf("unknown agent %q (supported: claude, codex, opencode, agents)", agentID)
+		return fmt.Errorf("unknown agent %q (supported: claude, codex, opencode, agents, gemini, cursor, windsurf)", agentID)
 	}
 	if !a.Detect() {
 		fmt.Fprintf(os.Stderr, "agent %q not detected on this system\n", a.ID())

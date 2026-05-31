@@ -72,8 +72,10 @@ mallard registry               # list installed skills/commands
 mallard version                # print version
 ```
 
-The binary auto-detects installed agents (claude, agents, codex, opencode) and
-symlinks the appropriate skills/commands directories.
+The binary auto-detects installed agents (claude, codex, opencode, agents,
+gemini, cursor, windsurf) and symlinks the appropriate skills/commands
+directories. Per-agent support varies: each agent only receives the kinds it
+hosts (e.g. commands link to claude/opencode; sub-agents to claude/cursor).
 
 ### From source
 
@@ -147,6 +149,7 @@ internal/
     adapter.go                Multi-agent Adapter interface
     claude.go codex.go        Per-agent implementations
     opencode.go generic.go
+    gemini.go cursor.go windsurf.go
     registry.go               All() / ByID() factory
   backup/backup.go            Snapshot/Restore + manifest, keep-latest-5 GC
   updater/updater.go          Pure Run(Options) → Report (CLI + TUI share it)

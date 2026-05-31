@@ -10,6 +10,9 @@ var all = []Adapter{
 	codexAdapter{},
 	openCodeAdapter{},
 	genericAdapter{},
+	geminiAdapter{},
+	cursorAdapter{},
+	windsurfAdapter{},
 }
 
 func All() []Adapter {
