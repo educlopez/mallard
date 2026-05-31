@@ -62,17 +62,22 @@ release:
   draft: false
   prerelease: auto
 
-brews:
+homebrew_casks:
   - repository:
       owner: educlopez
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
     name: mallard
     homepage: "https://github.com/educlopez/mallard"
     description: "Claude Code toolkit for PrestaShop development — skills, commands, and agents."
-    license: "MIT"
-    commit_msg_template: "chore: update mallard formula to {{ .Tag }}"
+    commit_msg_template: "chore: update mallard cask to {{ .Tag }}"
+    # Strip the Gatekeeper quarantine flag so the unsigned binary runs on first launch.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/mallard"]
+          end
 
 scoops:
   - repository:
