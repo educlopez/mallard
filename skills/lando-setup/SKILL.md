@@ -1,7 +1,7 @@
 ---
 name: lando-setup
 description: >
-  Sets up a Cinetic PrestaShop 8/9 project locally with Lando, or refreshes its
+  Sets up a PrestaShop 8/9 project locally with Lando, or refreshes its
   database from the server. Full setup configures Lando, syncs app/config, picks a
   free port, imports the DB and fixes shop URLs; DB refresh mode only re-dumps and
   re-imports the database. Use when the user says "monta el proyecto", "setup lando",
@@ -25,8 +25,12 @@ metadata:
 "actualízame la DB", "refresca la DB de X", "bájame la DB de X", "sync DB", "quiero la DB actualizada de X"
 → Skip to [DB Refresh Mode](#db-refresh-mode) below.
 
+## Placeholders
+- `{workspace}` — the directory under `~/developer/` where your projects live (e.g. your company or team name). Set it once; every path below uses `~/developer/{workspace}/{project-name}/`.
+- `{ssh_key}` — the SSH private key configured for the servers (e.g. `id_rsa_company`). Used explicitly on every SSH/rsync command.
+
 ## Context
-- Projects live at ~/developer/cinetic/{project-name}/
+- Projects live at ~/developer/{workspace}/{project-name}/
 - SSH hosts in ~/.ssh/config follow pattern: {alias}-prod, {alias}-pre
 - All projects are PrestaShop 8 or 9
 - DB credentials in app/config/parameters.php (on the SERVER)
@@ -34,21 +38,21 @@ metadata:
 
 ## SSH Authentication
 
-### Cinetic SSH Keys (Eduardo's keys)
-- `~/.ssh/id_rsa_cinetic` — RSA, `eduardo@cineticdigital.com` — **primary Cinetic key**
-- `~/.ssh/id_ed25519_cinetic` — Ed25519, `eduardocalvolopez@Mac-m1-Edu.local` — modern alternative
+### SSH Keys
+- `~/.ssh/{ssh_key}` — your primary company key (RSA). Replace `{ssh_key}` with your configured key name (e.g. `id_rsa_company`).
+- `~/.ssh/{ssh_key_ed25519}` — Ed25519, your company SSH key — modern alternative.
 
-Always use `-i ~/.ssh/id_rsa_cinetic` explicitly on all SSH/rsync commands to avoid key ambiguity.
+Always use `-i ~/.ssh/{ssh_key}` explicitly on all SSH/rsync commands to avoid key ambiguity.
 
 ### Auth modes
 
-**Key-based (most projects):** Cinetic public key is on the server. No password needed.
+**Key-based (most projects):** Your company public key is on the server. No password needed.
 
 **Password-based (some projects):** Key not on server. Use `sshpass` via stdin to avoid password in process list:
 ```bash
 export SSHPASS='{password}'
-sshpass -e ssh -i ~/.ssh/id_rsa_cinetic {user}@{ip} "command"
-sshpass -e ssh -i ~/.ssh/id_rsa_cinetic {user}@{ip} "mysqldump ..." > /tmp/dump.sql
+sshpass -e ssh -i ~/.ssh/{ssh_key} {user}@{ip} "command"
+sshpass -e ssh -i ~/.ssh/{ssh_key} {user}@{ip} "mysqldump ..." > /tmp/dump.sql
 unset SSHPASS
 ```
 Install if missing: `brew install sshpass`
@@ -59,7 +63,7 @@ Install if missing: `brew install sshpass`
 Host {alias}-{env}
   HostName {IP}
   User {user}
-  IdentityFile ~/.ssh/id_rsa_cinetic
+  IdentityFile ~/.ssh/{ssh_key}
 ```
 Ask user if they want to save it for future use. If yes, append to ~/.ssh/config.
 
@@ -75,7 +79,7 @@ Ask user (if not already provided):
   - If unsure: check server — Ploi = nginx, cPanel/Plesk = Apache.
 
 Derive:
-- `PROJECT_DIR=~/developer/cinetic/{project-name}`
+- `PROJECT_DIR=~/developer/{workspace}/{project-name}`
 - `SSH_TARGET={alias}-{env}` or `{user}@{ip}`
 - `LANDO_NAME={project-name}` (same as folder)
 - `LOCAL_URL={lando-name}.lndo.site`
@@ -83,19 +87,19 @@ Derive:
 
 **Test SSH connectivity before proceeding:**
 ```bash
-ssh -i ~/.ssh/id_rsa_cinetic -o ConnectTimeout=5 -o BatchMode=yes {SSH_TARGET} "echo OK" 2>&1
+ssh -i ~/.ssh/{ssh_key} -o ConnectTimeout=5 -o BatchMode=yes {SSH_TARGET} "echo OK" 2>&1
 ```
 If output is not `OK`, stop and diagnose auth failure with user before continuing.
 
 ## Step 2 — Detect PrestaShop version
 
 ```bash
-grep -A2 '"prestashop/prestashop"' ~/developer/cinetic/{project-name}/composer.json
+grep -A2 '"prestashop/prestashop"' ~/developer/{workspace}/{project-name}/composer.json
 ```
 
 Or check:
 ```bash
-grep "_PS_VERSION_" ~/developer/cinetic/{project-name}/config/defines.inc.php 2>/dev/null | head -1
+grep "_PS_VERSION_" ~/developer/{workspace}/{project-name}/config/defines.inc.php 2>/dev/null | head -1
 ```
 
 - Version 8.x → PS8, PHP 8.1
@@ -106,7 +110,7 @@ If version is not clearly readable from files, ask user: "¿PS8 o PS9?" — do n
 ## Step 3 — Find remote webroot
 
 ```bash
-ssh -i ~/.ssh/id_rsa_cinetic {SSH_TARGET} "find /var/www -name 'parameters.php' -path '*/app/config/*' 2>/dev/null"
+ssh -i ~/.ssh/{ssh_key} {SSH_TARGET} "find /var/www -name 'parameters.php' -path '*/app/config/*' 2>/dev/null"
 ```
 
 If multiple results appear, show them to user and ask which is the correct one.
@@ -119,31 +123,31 @@ These files/folders are NOT in git and must be copied from the server via rsync.
 
 ### 4a — vendor/ (root, required)
 ```bash
-rsync -avz --progress -e "ssh -i ~/.ssh/id_rsa_cinetic" \
-  {SSH_TARGET}:{REMOTE_ROOT}/vendor/ ~/developer/cinetic/{project}/vendor/
+rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" \
+  {SSH_TARGET}:{REMOTE_ROOT}/vendor/ ~/developer/{workspace}/{project}/vendor/
 ```
 
 ### 4b — translations/ (required for PS9)
 Without this folder, PS9 throws DirectoryNotFoundException on boot.
 ```bash
-rsync -avz --progress -e "ssh -i ~/.ssh/id_rsa_cinetic" \
-  {SSH_TARGET}:{REMOTE_ROOT}/translations/ ~/developer/cinetic/{project}/translations/
+rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" \
+  {SSH_TARGET}:{REMOTE_ROOT}/translations/ ~/developer/{workspace}/{project}/translations/
 ```
 
 ### 4c — app/config/ files (required)
-If `~/developer/cinetic/{project}/app/config/parameters.php` already exists locally, warn user:
+If `~/developer/{workspace}/{project}/app/config/parameters.php` already exists locally, warn user:
 > "app/config/ exists locally. Sync from server will overwrite parameters.php. Continue? (y/n)"
 
 ```bash
-rsync -avz --progress -e "ssh -i ~/.ssh/id_rsa_cinetic" \
-  {SSH_TARGET}:{REMOTE_ROOT}/app/config/ ~/developer/cinetic/{project}/app/config/
+rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" \
+  {SSH_TARGET}:{REMOTE_ROOT}/app/config/ ~/developer/{workspace}/{project}/app/config/
 ```
 
 ### 4d — modules/ (required)
 Sync the full modules directory. Modules not in git (theme modules, standard PS modules) won't exist locally otherwise.
 ```bash
-rsync -avz --progress -e "ssh -i ~/.ssh/id_rsa_cinetic" \
-  {SSH_TARGET}:{REMOTE_ROOT}/modules/ ~/developer/cinetic/{project}/modules/
+rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" \
+  {SSH_TARGET}:{REMOTE_ROOT}/modules/ ~/developer/{workspace}/{project}/modules/
 ```
 This is simpler and safer than syncing individual vendor/ subdirs — covers theme modules (e.g. Panda) and any PS module not committed to git.
 
@@ -152,13 +156,13 @@ The img/ folder can be several GB. Ask user:
 > "¿Descargo la carpeta img/ del servidor o usamos placeholder de imágenes? (recomendado: placeholder)"
 
 - If placeholder → trigger `lando-img-placeholder` skill after setup (it handles both lamp and lemp automatically)
-- If download → `rsync -avz --progress -e "ssh -i ~/.ssh/id_rsa_cinetic" {SSH_TARGET}:{REMOTE_ROOT}/img/ ~/developer/cinetic/{project}/img/`
+- If download → `rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" {SSH_TARGET}:{REMOTE_ROOT}/img/ ~/developer/{workspace}/{project}/img/`
 
 **Note for nginx (lemp) projects**: placeholder rules are built into `.lando/nginx-site.conf` — no separate Apache file needed. The `lando-img-placeholder` skill detects the recipe and acts accordingly.
 
 **Regardless of choice (placeholder or download), always create required subdirs:**
 ```bash
-mkdir -p ~/developer/cinetic/{project}/img/{c,p,m,st,cms,l,tmp,os,s,co,su}
+mkdir -p ~/developer/{workspace}/{project}/img/{c,p,m,st,cms,l,tmp,os,s,co,su}
 ```
 Without these, `ps_mainmenu` crashes calling `scandir('/app/img/c/')` on boot.
 
@@ -174,7 +178,7 @@ sed -i '' \
   -e "s/'database_user' => '[^']*'/'database_user' => 'lamp'/" \
   -e "s/'database_password' => '[^']*'/'database_password' => 'lamp'/" \
   -e "s/'mailer_host' => '[^']*'/'mailer_host' => 'sendmailhog'/" \
-  ~/developer/cinetic/{project}/app/config/parameters.php
+  ~/developer/{workspace}/{project}/app/config/parameters.php
 ```
 
 Lando default DB credentials: host=`database`, name=`lamp`, user=`lamp`, password=`lamp`, mailer=`sendmailhog`.
@@ -184,7 +188,7 @@ Verify the file was updated correctly before proceeding.
 
 At this point `app/config/parameters.php` should be synced locally. Read it:
 ```bash
-grep -E "database_(name|user|password|prefix)" ~/developer/cinetic/{project}/app/config/parameters.php
+grep -E "database_(name|user|password|prefix)" ~/developer/{workspace}/{project}/app/config/parameters.php
 ```
 
 Extract:
@@ -197,44 +201,44 @@ Extract:
 
 Key-based:
 ```bash
-ssh -i ~/.ssh/id_rsa_cinetic {SSH_TARGET} \
-  "mysqldump -h 127.0.0.1 -u'${DB_USER}' -p'${DB_PASS}' '${DB_NAME}'" > ~/developer/cinetic/{project-name}/dump.sql
+ssh -i ~/.ssh/{ssh_key} {SSH_TARGET} \
+  "mysqldump -h 127.0.0.1 -u'${DB_USER}' -p'${DB_PASS}' '${DB_NAME}'" > ~/developer/{workspace}/{project-name}/dump.sql
 ```
 
 Password-based (SSH password):
 ```bash
 export SSHPASS='{ssh_password}'
-sshpass -e ssh -i ~/.ssh/id_rsa_cinetic {user}@{ip} \
-  "mysqldump -h 127.0.0.1 -u'${DB_USER}' -p'${DB_PASS}' '${DB_NAME}'" > ~/developer/cinetic/{project-name}/dump.sql
+sshpass -e ssh -i ~/.ssh/{ssh_key} {user}@{ip} \
+  "mysqldump -h 127.0.0.1 -u'${DB_USER}' -p'${DB_PASS}' '${DB_NAME}'" > ~/developer/{workspace}/{project-name}/dump.sql
 unset SSHPASS
 ```
 
 Verify dump:
 ```bash
-wc -c ~/developer/cinetic/{project-name}/dump.sql
+wc -c ~/developer/{workspace}/{project-name}/dump.sql
 ```
 If file is under 100KB, likely failed or empty — check for errors before continuing.
 
 ## Step 8 — Pick available port
 
 ```bash
-grep -r "portforward" ~/developer/cinetic/*/.lando.yml 2>/dev/null
+grep -r "portforward" ~/developer/{workspace}/*/.lando.yml 2>/dev/null
 ```
 
 Pick the next free port above the highest found (start at 33290 if none found).
 
 ## Step 9 — Generate .lando.yml
 
-Create `~/developer/cinetic/{project-name}/.lando.yml`:
+Create `~/developer/{workspace}/{project-name}/.lando.yml`:
 
 **If this project was previously set up with a different MySQL version**, the old Docker volume may be corrupt (error: "Upgrade is not supported after a crash or shutdown with innodb_fast_shutdown = 2"). Fix: run `lando destroy -y` before `lando start`. This deletes the local DB volume — safe since we're importing a fresh dump anyway.
 
 First, create the PHP config override (prevents `max_execution_time` errors during theme install/parsing):
 ```bash
-mkdir -p ~/developer/cinetic/{project-name}/.lando
+mkdir -p ~/developer/{workspace}/{project-name}/.lando
 ```
 
-Create `~/developer/cinetic/{project-name}/.lando/php.ini`:
+Create `~/developer/{workspace}/{project-name}/.lando/php.ini`:
 ```ini
 max_execution_time = 300
 max_input_time = 300
@@ -448,24 +452,24 @@ If Docker is still not ready after 30s, stop and ask user to check OrbStack manu
 ## Step 11 — Start Lando
 
 ```bash
-cd ~/developer/cinetic/{project-name} && lando start
+cd ~/developer/{workspace}/{project-name} && lando start
 ```
 
 After start, verify PHP version matches expected:
 ```bash
-cd ~/developer/cinetic/{project-name} && lando php -v
+cd ~/developer/{workspace}/{project-name} && lando php -v
 ```
 If version doesn't match (e.g. shows 8.1 but expected 8.3), stop and fix `.lando.yml` before importing DB.
 
 ## Step 12 — Import DB
 
 ```bash
-cd ~/developer/cinetic/{project-name} && lando db-import dump.sql
+cd ~/developer/{workspace}/{project-name} && lando db-import dump.sql
 ```
 
 After import, verify tables exist:
 ```bash
-cd ~/developer/cinetic/{project-name} && lando mysql -e "SELECT COUNT(*) FROM ${DB_PREFIX}configuration;" 2>/dev/null
+cd ~/developer/{workspace}/{project-name} && lando mysql -e "SELECT COUNT(*) FROM ${DB_PREFIX}configuration;" 2>/dev/null
 ```
 If this returns 0 or errors, DO NOT delete the dump file — report failure to user and stop.
 
@@ -474,7 +478,7 @@ If this returns 0 or errors, DO NOT delete the dump file — report failure to u
 Use the actual `DB_PREFIX` read from parameters.php (Step 6), not hardcoded `ps_`:
 
 ```bash
-cd ~/developer/cinetic/{project-name} && lando mysql -e "
+cd ~/developer/{workspace}/{project-name} && lando mysql -e "
 UPDATE ${DB_PREFIX}configuration SET value = '{lando-name}.lndo.site' WHERE name = 'PS_SHOP_DOMAIN';
 UPDATE ${DB_PREFIX}configuration SET value = '{lando-name}.lndo.site' WHERE name = 'PS_SHOP_DOMAIN_SSL';
 UPDATE ${DB_PREFIX}shop_url SET domain = '{lando-name}.lndo.site', domain_ssl = '{lando-name}.lndo.site';
@@ -486,7 +490,7 @@ UPDATE ${DB_PREFIX}configuration SET value = 0 WHERE name = 'PS_SSL_ENABLED_EVER
 ## Step 14 — Clear cache
 
 ```bash
-cd ~/developer/cinetic/{project-name} && lando php bin/console cache:clear
+cd ~/developer/{workspace}/{project-name} && lando php bin/console cache:clear
 ```
 
 If that fails, ask user before deleting:
@@ -494,14 +498,14 @@ If that fails, ask user before deleting:
 
 If yes:
 ```bash
-rm -rf ~/developer/cinetic/{project-name}/var/cache/*
+rm -rf ~/developer/{workspace}/{project-name}/var/cache/*
 ```
 
 ## Step 15 — Done
 
 Clean dump only after successful import (verified in Step 12):
 ```bash
-rm ~/developer/cinetic/{project-name}/dump.sql
+rm ~/developer/{workspace}/{project-name}/dump.sql
 ```
 
 Report to user:
@@ -523,39 +527,39 @@ Use when Lando is already set up and running. Only refreshes the database.
 ### R0 — Read local credentials
 Check parameters.php exists:
 ```bash
-test -f ~/developer/cinetic/{project}/app/config/parameters.php || echo "MISSING"
+test -f ~/developer/{workspace}/{project}/app/config/parameters.php || echo "MISSING"
 ```
 If MISSING: stop and tell user to run full setup or sync app/config from server first.
 
 Read DB credentials and prefix:
 ```bash
-grep -E "database_(name|user|password|prefix)" ~/developer/cinetic/{project}/app/config/parameters.php
+grep -E "database_(name|user|password|prefix)" ~/developer/{workspace}/{project}/app/config/parameters.php
 ```
 
 ### R1 — Test SSH + Dump from server
 
 Test connectivity first:
 ```bash
-ssh -i ~/.ssh/id_rsa_cinetic -o ConnectTimeout=5 -o BatchMode=yes {SSH_TARGET} "echo OK"
+ssh -i ~/.ssh/{ssh_key} -o ConnectTimeout=5 -o BatchMode=yes {SSH_TARGET} "echo OK"
 ```
 
 Then dump (key-based):
 ```bash
-ssh -i ~/.ssh/id_rsa_cinetic {SSH_TARGET} \
-  "mysqldump -h 127.0.0.1 -u'${DB_USER}' -p'${DB_PASS}' '${DB_NAME}'" > ~/developer/cinetic/{project-name}/dump.sql
+ssh -i ~/.ssh/{ssh_key} {SSH_TARGET} \
+  "mysqldump -h 127.0.0.1 -u'${DB_USER}' -p'${DB_PASS}' '${DB_NAME}'" > ~/developer/{workspace}/{project-name}/dump.sql
 ```
 
-Verify: `wc -c ~/developer/cinetic/{project-name}/dump.sql` — must be > 100KB.
+Verify: `wc -c ~/developer/{workspace}/{project-name}/dump.sql` — must be > 100KB.
 
 ### R2 — Import (drop + recreate)
 
 ```bash
-cd ~/developer/cinetic/{project-name} && lando db-import dump.sql
+cd ~/developer/{workspace}/{project-name} && lando db-import dump.sql
 ```
 
 Verify tables after import:
 ```bash
-cd ~/developer/cinetic/{project-name} && lando mysql -e "SELECT COUNT(*) FROM ${DB_PREFIX}configuration;"
+cd ~/developer/{workspace}/{project-name} && lando mysql -e "SELECT COUNT(*) FROM ${DB_PREFIX}configuration;"
 ```
 If fails, keep dump and report to user.
 
@@ -563,7 +567,7 @@ If fails, keep dump and report to user.
 
 Use actual `DB_PREFIX` from parameters.php:
 ```bash
-cd ~/developer/cinetic/{project-name} && lando mysql -e "
+cd ~/developer/{workspace}/{project-name} && lando mysql -e "
 UPDATE ${DB_PREFIX}configuration SET value = '{lando-name}.lndo.site' WHERE name = 'PS_SHOP_DOMAIN';
 UPDATE ${DB_PREFIX}configuration SET value = '{lando-name}.lndo.site' WHERE name = 'PS_SHOP_DOMAIN_SSL';
 UPDATE ${DB_PREFIX}shop_url SET domain = '{lando-name}.lndo.site', domain_ssl = '{lando-name}.lndo.site';
@@ -575,11 +579,11 @@ UPDATE ${DB_PREFIX}configuration SET value = 0 WHERE name = 'PS_SSL_ENABLED_EVER
 ### R4 — Clear cache
 
 ```bash
-cd ~/developer/cinetic/{project-name} && lando php bin/console cache:clear
+cd ~/developer/{workspace}/{project-name} && lando php bin/console cache:clear
 ```
 
 ### R5 — Done
-Delete dump (only if import verified): `rm ~/developer/cinetic/{project-name}/dump.sql`. Report URL.
+Delete dump (only if import verified): `rm ~/developer/{workspace}/{project-name}/dump.sql`. Report URL.
 
 ---
 

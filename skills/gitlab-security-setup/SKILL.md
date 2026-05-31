@@ -1,9 +1,9 @@
 ---
-name: cinetic-security-setup
+name: gitlab-security-setup
 description: >
-  Sets up the full Cinetic security stack on Cinetic projects hosted on GitLab.com
+  Sets up a full security stack on your company's projects hosted on GitLab.com
   (non-PrestaShop: Laravel, Astro, TanStack, etc.). Use ONLY when the project is
-  a Cinetic company project on GitLab.com Free tier. Triggers when the user asks
+  a GitLab.com Free tier project. Triggers when the user asks
   to add dependency scanning, vulnerability alerts, security setup, Trivy, pnpm
   supply chain protection, or wants email reports of vulnerabilities. Do NOT use
   for GitHub-hosted projects, personal projects, or PrestaShop projects — use
@@ -13,10 +13,14 @@ metadata:
   author: Eduardo Calvo
 ---
 
-# Cinetic Security Setup
+# GitLab Security Setup
 
-Full security stack for Cinetic projects on GitLab.com Free tier.
+Full security stack for your company's GitLab.com projects on the Free tier.
 Covers: pnpm 11 supply chain, Trivy weekly scan, HTML email reports via Gmail.
+
+> **Placeholder:** `{report_recipients}` is a comma-separated list of email
+> addresses that receive the vulnerability reports (e.g. `you@example.com, teammate@example.com`).
+> Replace it everywhere it appears below with your own recipient address(es) before running.
 
 ## What gets set up
 
@@ -191,6 +195,8 @@ dependency-scan:
       sha = os.environ.get("CI_COMMIT_SHORT_SHA", "")
       pipeline_url = os.environ.get("CI_PIPELINE_URL", "#")
       gmail_user = os.environ.get("GMAIL_USER", "")
+      # Comma-separated recipient list — set REPORT_RECIPIENTS as a CI/CD variable
+      report_recipients = os.environ.get("REPORT_RECIPIENTS", "")
 
       table = "" if not vulns else f"""
       <table style='width:100%;border-collapse:collapse;margin-top:10px'>
@@ -242,7 +248,7 @@ dependency-scan:
         <pre style='background:#f6f8fa;padding:15px;border-radius:6px;font-size:11px;white-space:pre-wrap;border:1px solid #e1e4e8'>{md_escaped}</pre>
       """
 
-      html = f"""From: {gmail_user}\r\nTo: eduardo@cineticdigital.com, dgalera@cineticdigital.com\r\nSubject: [{project}] Security Scan — {counts.get('CRITICAL',0)} critical, {counts.get('HIGH',0)} high\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
+      html = f"""From: {gmail_user}\r\nTo: {report_recipients}\r\nSubject: [{project}] Security Scan — {counts.get('CRITICAL',0)} critical, {counts.get('HIGH',0)} high\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
       <!DOCTYPE html><html><head></head><body style='font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:20px;color:#333'>
         <h2 style='color:#24292e'>Security Scan — {project}</h2>
         <p>Branch: <strong>{branch}</strong> &nbsp;|&nbsp; Commit: <code>{sha}</code></p>
@@ -265,11 +271,18 @@ dependency-scan:
       PYEOF
 
     - |
+      # REPORT_RECIPIENTS is a comma-separated CI/CD variable (e.g. "you@example.com,teammate@example.com").
+      # Build one --mail-rcpt flag per address.
+      RCPT_ARGS=""
+      IFS=',' read -ra ADDRS <<< "$REPORT_RECIPIENTS"
+      for addr in "${ADDRS[@]}"; do
+        addr="$(echo "$addr" | xargs)"   # trim whitespace
+        [ -n "$addr" ] && RCPT_ARGS="$RCPT_ARGS --mail-rcpt $addr"
+      done
       curl --url "smtps://smtp.gmail.com:465" \
         --ssl-reqd \
         --mail-from "$GMAIL_USER" \
-        --mail-rcpt "eduardo@cineticdigital.com" \
-        --mail-rcpt "dgalera@cineticdigital.com" \
+        $RCPT_ARGS \
         --user "$GMAIL_USER:$GMAIL_APP_PASS" \
         -T email_body.txt
   artifacts:
@@ -300,6 +313,9 @@ In GitLab project: **Settings → CI/CD → Variables**
 |----------|-------|-----------|--------|
 | `GMAIL_USER` | `your-account@gmail.com` | No | No |
 | `GMAIL_APP_PASS` | App password from Google | No | Yes |
+| `REPORT_RECIPIENTS` | `you@example.com,teammate@example.com` (comma-separated) | No | No |
+
+> Set `REPORT_RECIPIENTS` to your own recipient address(es) — this is who receives the vulnerability report email.
 
 **Getting Gmail App Password:**
 1. Google Account → Security → 2-Step Verification (must be ON)
@@ -395,7 +411,7 @@ When the scan reports a fixable HIGH/CRITICAL on a transitive dep:
 - [ ] `pnpm-workspace.yaml` created with `minimumReleaseAge: 2880` + overrides
 - [ ] `package.json` has `"packageManager": "pnpm@11.x.x"`, no `overrides` block
 - [ ] `.gitlab-ci.yml` has `dependency-scan` job (Step 2)
-- [ ] GitLab CI/CD variables set: `GMAIL_USER`, `GMAIL_APP_PASS`
+- [ ] GitLab CI/CD variables set: `GMAIL_USER`, `GMAIL_APP_PASS`, `REPORT_RECIPIENTS`
 - [ ] Pipeline schedule created (Monday 8am Madrid)
-- [ ] Manual trigger test → email received by both `eduardo@cineticdigital.com` and `dgalera@cineticdigital.com`
+- [ ] Manual trigger test → email received by every address in `REPORT_RECIPIENTS`
 - [ ] `pnpm install` runs clean locally

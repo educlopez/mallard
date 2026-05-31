@@ -244,6 +244,8 @@ ps-security-audit:
       sha = os.environ.get("CI_COMMIT_SHORT_SHA", "")
       pipeline_url = os.environ.get("CI_PIPELINE_URL", "#")
       gmail_user = os.environ.get("GMAIL_USER", "")
+      # Comma-separated recipient list — set REPORT_RECIPIENTS as a CI/CD variable
+      report_recipients = os.environ.get("REPORT_RECIPIENTS", "")
 
       # PS core section
       ps_badge_color = "#ffeef0" if ps_outdated else "#e6ffed"
@@ -376,7 +378,7 @@ ps-security-audit:
       trivy_high = trivy_counts.get("HIGH", 0)
       subject = f"[{project}] PS Security — {fop_count} módulos vulnerables, {trivy_critical} CVE críticos"
 
-      html = f"""From: {gmail_user}\r\nTo: eduardo@cineticdigital.com, dgalera@cineticdigital.com\r\nSubject: {subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
+      html = f"""From: {gmail_user}\r\nTo: {report_recipients}\r\nSubject: {subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n
       <!DOCTYPE html><html><head></head><body style='font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:20px;color:#333'>
         <h2 style='color:#24292e'>PrestaShop Security Scan — {project}</h2>
         <p>Branch: <strong>{branch}</strong> &nbsp;|&nbsp; Commit: <code>{sha}</code></p>
@@ -401,11 +403,18 @@ ps-security-audit:
       PYEOF
 
     - |
+      # REPORT_RECIPIENTS is a comma-separated CI/CD variable (e.g. "you@example.com,teammate@example.com").
+      # Build one --mail-rcpt flag per address.
+      RCPT_ARGS=""
+      IFS=',' read -ra ADDRS <<< "$REPORT_RECIPIENTS"
+      for addr in "${ADDRS[@]}"; do
+        addr="$(echo "$addr" | xargs)"   # trim whitespace
+        [ -n "$addr" ] && RCPT_ARGS="$RCPT_ARGS --mail-rcpt $addr"
+      done
       curl --url "smtps://smtp.gmail.com:465" \
         --ssl-reqd \
         --mail-from "$GMAIL_USER" \
-        --mail-rcpt "eduardo@cineticdigital.com" \
-        --mail-rcpt "dgalera@cineticdigital.com" \
+        $RCPT_ARGS \
         --user "$GMAIL_USER:$GMAIL_APP_PASS" \
         -T email_body.txt
   artifacts:
@@ -428,6 +437,9 @@ ps-security-audit:
 |----------|-------|--------|
 | `GMAIL_USER` | `cuenta@gmail.com` | No |
 | `GMAIL_APP_PASS` | App password Google (16 chars) | Yes |
+| `REPORT_RECIPIENTS` | `you@example.com,teammate@example.com` (separado por comas) | No |
+
+> Configura `REPORT_RECIPIENTS` con tu(s) propia(s) dirección(es) — son los destinatarios del email de reporte.
 
 **Cómo obtener App Password Gmail:**
 1. Google Account → Security → 2-Step Verification (debe estar ON)
@@ -493,7 +505,7 @@ Si los módulos están en path distinto, ajustar el glob en el script Python.
 ## Checklist para nuevo proyecto PS
 
 - [ ] `.gitlab-ci.yml` con job `ps-security-audit` (Step 1)
-- [ ] Variables GitLab CI/CD: `GMAIL_USER`, `GMAIL_APP_PASS`
+- [ ] Variables GitLab CI/CD: `GMAIL_USER`, `GMAIL_APP_PASS`, `REPORT_RECIPIENTS`
 - [ ] Pipeline schedule creado (lunes 07:00 UTC)
 - [ ] Test manual → email recibido con secciones: Core version, FoP modules, Trivy deps
 - [ ] Verificar que `modules/` existe en el repositorio (no en `.gitignore`)

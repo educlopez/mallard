@@ -101,7 +101,7 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/du
 
 | Skill | Trigger |
 |-------|---------|
-| `cinetic-security-setup` | Add Trivy + pnpm supply chain protection to GitLab projects (non-PS) |
+| `gitlab-security-setup` | Add Trivy + pnpm supply chain protection to GitLab projects (non-PS) |
 | `lando-img-placeholder` | Static image placeholder for local Lando/PrestaShop dev |
 | `ps-demo-user` | Create demo user in PrestaShop 8 (Lando) |
 | `ps-security-audit` | Weekly CVE scan for PS projects: Friends of Presta module check + Trivy + core version |
