@@ -34,7 +34,12 @@ func main() {
 
 	switch args[0] {
 	case "doctor":
-		if err := cmd.RunDoctor(repoRoot); err != nil {
+		dargs, err := cmd.ParseDoctorArgs(args[1:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if err := cmd.RunDoctor(repoRoot, dargs); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
@@ -156,6 +161,7 @@ Usage:
   duck-ai update --list-backups  List backup batches under ~/.duck-ai/backups
   duck-ai update --restore TS    Restore files from backup TS (full stamp or unique prefix)
   duck-ai doctor                 Check symlink health per detected agent
+  duck-ai doctor --fix           Repair broken/missing duck-ai-managed links only
   duck-ai registry               List skills/commands with versions per agent
   duck-ai registry --source      List source entries from the repo
   duck-ai registry --json        Emit machine-readable JSON
