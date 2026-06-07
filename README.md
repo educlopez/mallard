@@ -1,7 +1,10 @@
-# mallard
+# Mallard
 
-Personal Claude Code toolkit — skills, commands, and setup scripts.
-Built for the day-to-day work of PrestaShop development teams.
+Claude Code, Codex & OpenCode toolkit — skills, commands, and subagents,
+synced with one CLI. Built for the day-to-day work of PrestaShop
+development teams.
+
+**[Website & docs → mallard.educalvolopez.com](https://mallard.educalvolopez.com)**
 
 ## Related tools
 

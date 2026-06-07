@@ -68,7 +68,7 @@ homebrew_casks:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     name: mallard
-    homepage: "https://github.com/educlopez/mallard"
+    homepage: "https://mallard.educalvolopez.com"
     description: "Claude Code toolkit for PrestaShop development — skills, commands, and agents."
     commit_msg_template: "chore: update mallard cask to {{ .Tag }}"
     # Strip the Gatekeeper quarantine flag so the unsigned binary runs on first launch.
@@ -85,7 +85,7 @@ scoops:
       name: scoop-bucket
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     name: mallard
-    homepage: "https://github.com/educlopez/mallard"
+    homepage: "https://mallard.educalvolopez.com"
     description: "Claude Code toolkit for PrestaShop development — skills, commands, and agents."
     license: MIT
     commit_msg_template: "chore: update mallard to {{ .Tag }}"
