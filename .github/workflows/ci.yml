@@ -6,9 +6,38 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
-  build:
-    name: Build & Vet
+  build-and-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: go build
+        run: go build ./...
+
+      - name: go test
+        # Tests that rely on symlinks or OS-specific paths may fail on Windows.
+        # Keep Windows in the matrix so compilation is validated; mark test
+        # failures non-blocking until the affected tests are fixed.
+        continue-on-error: ${{ matrix.os == 'windows-latest' }}
+        run: go test -race ./...
+
+  vet:
+    name: Vet
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,9 +47,45 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+          cache: true
 
       - name: go vet
         run: go vet ./...
 
-      - name: go build
-        run: go build ./...
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+
+  vuln:
+    name: Vulnerability Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          # Latest stable patch release — stdlib vulnerabilities reported by
+          # govulncheck are fixed in patch releases, so pinning the go.mod
+          # version here would keep flagging already-fixed CVEs.
+          go-version: stable
+          check-latest: true
+          cache: true
+
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

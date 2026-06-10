@@ -2,8 +2,12 @@ package update
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 )
@@ -30,13 +34,15 @@ func withMockClient(t *testing.T, status int, body string) {
 	}
 }
 
+
 const cannedRelease = `{
   "tag_name": "v0.3.0",
   "assets": [
     {"name": "mallard_0.3.0_darwin_arm64.tar.gz", "browser_download_url": "https://example.com/darwin_arm64"},
     {"name": "mallard_0.3.0_darwin_amd64.tar.gz", "browser_download_url": "https://example.com/darwin_amd64"},
     {"name": "mallard_0.3.0_linux_amd64.tar.gz",  "browser_download_url": "https://example.com/linux_amd64"},
-    {"name": "mallard_0.3.0_windows_amd64.zip",   "browser_download_url": "https://example.com/windows_amd64"}
+    {"name": "mallard_0.3.0_windows_amd64.zip",   "browser_download_url": "https://example.com/windows_amd64"},
+    {"name": "checksums.txt",                      "browser_download_url": "https://example.com/checksums.txt"}
   ]
 }`
 
@@ -185,9 +191,24 @@ func TestRunBrewGuard(t *testing.T) {
 	withMockClient(t, http.StatusOK, cannedRelease)
 	origExe := executablePath
 	t.Cleanup(func() { executablePath = origExe })
-	executablePath = func() (string, error) {
-		return "/opt/homebrew/Cellar/mallard/0.2.0/bin/mallard", nil
+	// Create a real temp directory whose path contains the brew Cellar pattern
+	// so filepath.EvalSymlinks succeeds and detectPackageManager fires.
+	brewDir := t.TempDir()
+	// Rename temp dir to embed the cellar pattern in the path is not portable,
+	// so instead we create a real file inside the temp dir and fake the path
+	// by overriding executablePath to return a path we've arranged to exist.
+	// We create a real file and craft the path reported by executablePath to
+	// contain the brew marker: we put a "Cellar/mallard" subdirectory with the
+	// binary inside, then return that path.
+	binDir := brewDir + "/Cellar/mallard/0.2.0/bin"
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("setup brew dir: %v", err)
 	}
+	binPath := binDir + "/mallard"
+	if err := os.WriteFile(binPath, []byte("fake"), 0o755); err != nil {
+		t.Fatalf("setup brew bin: %v", err)
+	}
+	executablePath = func() (string, error) { return binPath, nil }
 	var buf bytes.Buffer
 	// Behind latest and not a dev build, so it would normally try to replace —
 	// the brew guard must intercept before any download.
@@ -203,8 +224,13 @@ func TestRunDryRunResolvesAsset(t *testing.T) {
 	withMockClient(t, http.StatusOK, cannedRelease)
 	origExe := executablePath
 	t.Cleanup(func() { executablePath = origExe })
-	// A path outside any package manager so the guard does not fire.
-	executablePath = func() (string, error) { return t.TempDir() + "/mallard", nil }
+	// Create a real file so filepath.EvalSymlinks succeeds.
+	// The path must be outside any package manager pattern so the guard does not fire.
+	binPath := t.TempDir() + "/mallard"
+	if err := os.WriteFile(binPath, []byte("fake"), 0o755); err != nil {
+		t.Fatalf("setup bin: %v", err)
+	}
+	executablePath = func() (string, error) { return binPath, nil }
 	var buf bytes.Buffer
 	if err := Run(&buf, Options{CurrentVersion: "v0.2.0", DryRun: true}); err != nil {
 		t.Fatalf("Run dry-run: %v", err)
@@ -218,5 +244,107 @@ func TestFetchLatestBadStatus(t *testing.T) {
 	withMockClient(t, http.StatusNotFound, `{}`)
 	if _, err := fetchLatest(); err == nil {
 		t.Fatalf("expected error on 404")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Checksum verification tests
+// ---------------------------------------------------------------------------
+
+// sha256Hex returns the hex-encoded SHA-256 digest of data.
+func sha256Hex(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// cannedAssets returns a minimal asset list that includes checksums.txt pointing
+// to the given URL.
+func cannedAssetsWithChecksum(checksumURL string) []asset {
+	return []asset{
+		{Name: "mallard_0.3.0_linux_amd64.tar.gz", BrowserDownloadURL: "https://example.com/archive"},
+		{Name: "checksums.txt", BrowserDownloadURL: checksumURL},
+	}
+}
+
+func TestVerifyChecksumMatch(t *testing.T) {
+	archiveData := []byte("fake-archive-content")
+	archiveName := "mallard_0.3.0_linux_amd64.tar.gz"
+	correctHex := sha256Hex(archiveData)
+
+	checksumBody := fmt.Sprintf("%s  %s\n", correctHex, archiveName)
+	assets := cannedAssetsWithChecksum("https://example.com/checksums.txt")
+
+	orig := httpClient
+	t.Cleanup(func() { httpClient = orig })
+	httpClient = &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(checksumBody)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	if err := verifyChecksum(assets, "v0.3.0", archiveName, archiveData); err != nil {
+		t.Fatalf("expected no error on checksum match, got: %v", err)
+	}
+}
+
+func TestVerifyChecksumMismatch(t *testing.T) {
+	archiveData := []byte("fake-archive-content")
+	archiveName := "mallard_0.3.0_linux_amd64.tar.gz"
+	wrongHex := sha256Hex([]byte("different-content"))
+
+	checksumBody := fmt.Sprintf("%s  %s\n", wrongHex, archiveName)
+	assets := cannedAssetsWithChecksum("https://example.com/checksums.txt")
+
+	orig := httpClient
+	t.Cleanup(func() { httpClient = orig })
+	httpClient = &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(checksumBody)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	err := verifyChecksum(assets, "v0.3.0", archiveName, archiveData)
+	if err == nil {
+		t.Fatal("expected error on checksum mismatch, got nil")
+	}
+	if !strings.Contains(err.Error(), "checksum mismatch") {
+		t.Fatalf("expected 'checksum mismatch' in error, got: %v", err)
+	}
+}
+
+func TestVerifyChecksumMissingEntry(t *testing.T) {
+	archiveData := []byte("fake-archive-content")
+	archiveName := "mallard_0.3.0_linux_amd64.tar.gz"
+
+	// checksums.txt lists a different archive — our entry is absent.
+	checksumBody := "aabbcc  mallard_0.3.0_darwin_arm64.tar.gz\n"
+	assets := cannedAssetsWithChecksum("https://example.com/checksums.txt")
+
+	orig := httpClient
+	t.Cleanup(func() { httpClient = orig })
+	httpClient = &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(checksumBody)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	err := verifyChecksum(assets, "v0.3.0", archiveName, archiveData)
+	if err == nil {
+		t.Fatal("expected error when archive entry is missing from checksums.txt, got nil")
+	}
+	if !strings.Contains(err.Error(), "not found in checksums.txt") {
+		t.Fatalf("expected 'not found in checksums.txt' in error, got: %v", err)
 	}
 }

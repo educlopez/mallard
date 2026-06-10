@@ -92,6 +92,13 @@ func NewSession() (*Session, error) {
 	return &Session{rootDir: root, stamp: stamp}, nil
 }
 
+// NewSessionAt creates a backup session rooted at an explicit directory.
+// Intended for testing; production code uses NewSession.
+func NewSessionAt(rootDir string) (*Session, error) {
+	stamp := time.Now().UTC().Format("20060102T150405Z")
+	return &Session{rootDir: rootDir, stamp: stamp}, nil
+}
+
 // Root returns the backup directory path. Empty until first snapshot.
 func (s *Session) Root() string {
 	s.mu.Lock()
@@ -107,6 +114,21 @@ func (s *Session) Count() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return len(s.entries)
+}
+
+// DiscardEntry removes the last entry whose BackupPath matches e.BackupPath from
+// the session entry list. It is used to roll back a snapshot when a subsequent
+// operation (e.g. RemoveAll) fails and the snapshot should not count as a backup
+// hit. The backup file on disk is left in place (harmless orphan).
+func (s *Session) DiscardEntry(e Entry) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := len(s.entries) - 1; i >= 0; i-- {
+		if s.entries[i].BackupPath == e.BackupPath {
+			s.entries = append(s.entries[:i], s.entries[i+1:]...)
+			return
+		}
+	}
 }
 
 // Snapshot copies the file or directory at originalPath into the session's
@@ -202,10 +224,19 @@ func (s *Session) storeDeduped(src, dst string) (sum string, hit bool, err error
 	// one inode. Remove any stale dst first so the link call is deterministic.
 	_ = os.Remove(dst)
 	if lerr := os.Link(casPath, dst); lerr != nil {
-		// Hardlinks may be unavailable; fall back to a plain copy of the CAS
-		// object so restore still works (dedup is lost only for this entry).
+		// Hardlinks may be unavailable (cross-device, unsupported fs). Fall back
+		// to a plain copy. Prefer copying from the CAS object; if it has been
+		// concurrently removed (e.g. by a GC race), copy directly from src.
 		if _, cerr := copyFile(casPath, dst); cerr != nil {
-			return "", false, cerr
+			if !os.IsNotExist(cerr) {
+				return "", false, cerr
+			}
+			// CAS object disappeared (concurrent GC). Copy from original src;
+			// no longer a dedup hit since the content was re-read, not shared.
+			hit = false
+			if _, cerr2 := copyFile(src, dst); cerr2 != nil {
+				return "", false, cerr2
+			}
 		}
 	}
 	return sum, hit, nil
@@ -259,7 +290,7 @@ func (s *Session) Finalize() error {
 // manifest and the archive itself) into a single tar.gz. Paths inside the
 // archive are relative to rootDir so extraction can faithfully reproduce the
 // batch layout. Symlink-record (.symlink) files are stored verbatim like any
-// regular file.
+// regular file. Symlink directory entries are skipped.
 func writeSessionArchive(rootDir string, entries []Entry) error {
 	if len(entries) == 0 {
 		return nil
@@ -273,40 +304,27 @@ func writeSessionArchive(rootDir string, entries []Entry) error {
 	gw := gzip.NewWriter(f)
 	tw := tar.NewWriter(gw)
 
-	err = filepath.Walk(rootDir, func(path string, info os.FileInfo, werr error) error {
+	err = filepath.WalkDir(rootDir, func(path string, d os.DirEntry, werr error) error {
 		if werr != nil {
 			return werr
 		}
-		if info.IsDir() {
+		if d.IsDir() {
+			return nil
+		}
+		// Skip symlink directory entries; regular .symlink record files are
+		// plain files and will be included by the regular-file branch below.
+		if d.Type()&os.ModeSymlink != 0 {
 			return nil
 		}
 		base := filepath.Base(path)
 		if base == archiveName || base == "manifest.json" || base == pinMarker {
 			return nil
 		}
-		// Only archive regular files (the raw copies and .symlink records).
-		if info.Mode()&os.ModeSymlink != 0 {
-			return nil
-		}
 		rel, rerr := filepath.Rel(rootDir, path)
 		if rerr != nil {
 			return rerr
 		}
-		data, rerr := os.ReadFile(path)
-		if rerr != nil {
-			return rerr
-		}
-		hdr := &tar.Header{
-			Typeflag: tar.TypeReg,
-			Name:     filepath.ToSlash(rel),
-			Mode:     int64(info.Mode().Perm()),
-			Size:     int64(len(data)),
-		}
-		if werr := tw.WriteHeader(hdr); werr != nil {
-			return werr
-		}
-		_, werr = tw.Write(data)
-		return werr
+		return addFileToTar(tw, path, filepath.ToSlash(rel))
 	})
 	if err != nil {
 		_ = tw.Close()
@@ -318,6 +336,35 @@ func writeSessionArchive(rootDir string, entries []Entry) error {
 	}
 	if err := gw.Close(); err != nil {
 		return fmt.Errorf("close gzip: %w", err)
+	}
+	return nil
+}
+
+// addFileToTar writes the tar header and streams the contents of path into tw.
+// The header size comes from a Stat of the already-open handle so it cannot
+// disagree with the bytes actually copied. Using a helper function rather than
+// an inline open/defer avoids deferring a Close inside a loop.
+func addFileToTar(tw *tar.Writer, path, relName string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	hdr := &tar.Header{
+		Typeflag: tar.TypeReg,
+		Name:     relName,
+		Mode:     int64(info.Mode().Perm()),
+		Size:     info.Size(),
+	}
+	if err := tw.WriteHeader(hdr); err != nil {
+		return err
+	}
+	if _, err := io.CopyN(tw, f, info.Size()); err != nil {
+		return fmt.Errorf("archive %s: %w", relName, err)
 	}
 	return nil
 }

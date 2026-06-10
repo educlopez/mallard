@@ -299,7 +299,7 @@ func ParseUpdateArgs(args []string) (UpdateArgs, error) {
 			i++
 		default:
 			if strings.HasPrefix(args[i], "-") {
-				_, _ = fmt.Fprintf(os.Stderr, "unknown flag %q\n", args[i])
+				return out, fmt.Errorf("unknown update flag %q", args[i])
 			}
 		}
 	}

@@ -214,7 +214,36 @@ download_and_install() {
     if [ "$actual_checksum" != "$expected_checksum" ]; then
         fatal "Checksum mismatch!\n  Expected: ${expected_checksum}\n  Got:      ${actual_checksum}"
     fi
-    success "Checksum verified"
+    success "Checksum verified (sha256)"
+
+    # Optional cosign signature verification — requires cosign on PATH.
+    # If absent, we continue with sha256-only verification (does not break existing installs).
+    if command -v cosign >/dev/null 2>&1; then
+        info "cosign found — verifying checksums.txt signature..."
+        local sig_url pem_url
+        sig_url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${VERSION_TAG}/checksums.txt.sig"
+        pem_url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${VERSION_TAG}/checksums.txt.pem"
+        if curl_auth -sfL -o "${tmpdir}/checksums.txt.sig" "$sig_url" && \
+           curl_auth -sfL -o "${tmpdir}/checksums.txt.pem" "$pem_url"; then
+            if cosign verify-blob \
+                --certificate="${tmpdir}/checksums.txt.pem" \
+                --signature="${tmpdir}/checksums.txt.sig" \
+                --certificate-identity-regexp="^https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/\.github/workflows/release\.yml@.+\$" \
+                --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+                "${tmpdir}/checksums.txt" 2>/dev/null; then
+                success "cosign signature verified"
+            else
+                warn "cosign verification failed — checksums.txt signature invalid. Aborting."
+                fatal "cosign verify-blob failed for checksums.txt. Release may be tampered."
+            fi
+        else
+            # Releases published before signing was added ship no .sig/.pem assets;
+            # fail open so those installs keep working (sha256 already verified above).
+            warn "Could not download cosign signature/certificate (release may predate signing) — continuing with sha256-only verification."
+        fi
+    else
+        info "cosign not found — skipping keyless signature check (sha256 verification still applied)."
+    fi
 
     # Extract
     info "Extracting ${BINARY_NAME}..."
@@ -230,16 +259,13 @@ download_and_install() {
     mkdir -p "$install_dir"
 
     info "Installing to ${install_dir}/${BINARY_NAME}..."
-    if ! cp "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}" 2>/dev/null; then
+    if ! install -m 755 "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}" 2>/dev/null; then
         if command -v sudo >/dev/null 2>&1; then
             warn "Permission denied. Retrying with sudo..."
-            sudo cp "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}"
-            sudo chmod +x "${install_dir}/${BINARY_NAME}"
+            sudo install -m 755 "${tmpdir}/${BINARY_NAME}" "${install_dir}/${BINARY_NAME}"
         else
             fatal "Cannot write to ${install_dir}. Set MALLARD_INSTALL_DIR to a writable directory."
         fi
-    else
-        chmod +x "${install_dir}/${BINARY_NAME}"
     fi
 
     INSTALL_DIR="$install_dir"

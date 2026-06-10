@@ -13,18 +13,20 @@ import (
 // RegistryArgs mirrors cmd.RegistryArgs so callers can pass flag state into
 // the renderer. cmd.RunRegistry adapts cmd.RegistryArgs to this struct.
 type RegistryArgs struct {
-	Source bool
-	JSON   bool
-	All    bool
-	Help   bool
+	Source        bool
+	JSON          bool
+	All           bool
+	Help          bool
+	Scope         agents.Scope
+	WorkspaceRoot string
 }
 
 // ParseRegistryArgs parses the same flags accepted by `mallard registry`.
 // Kept here so the TUI can also build args without depending on cmd.
 func ParseRegistryArgs(args []string) (RegistryArgs, error) {
 	var out RegistryArgs
-	for _, a := range args {
-		switch a {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
 		case "--source":
 			out.Source = true
 		case "--json":
@@ -33,9 +35,19 @@ func ParseRegistryArgs(args []string) (RegistryArgs, error) {
 			out.All = true
 		case "--help", "-h":
 			out.Help = true
+		case "--scope":
+			if i+1 >= len(args) {
+				return out, fmt.Errorf("--scope requires a value")
+			}
+			sc, err := agents.ParseScope(args[i+1])
+			if err != nil {
+				return out, err
+			}
+			out.Scope = sc
+			i++
 		default:
-			if strings.HasPrefix(a, "-") {
-				return out, fmt.Errorf("unknown flag %q", a)
+			if strings.HasPrefix(args[i], "-") {
+				return out, fmt.Errorf("unknown flag %q", args[i])
 			}
 		}
 	}
@@ -58,12 +70,17 @@ func Registry(w io.Writer, repoRoot string, args RegistryArgs) error {
 		return printSourceText(w, source)
 	}
 
+	scope := args.Scope
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
+
 	installed := map[string][]skillregistry.Manifest{}
 	for _, a := range agents.All() {
 		if !a.Detect() {
 			continue
 		}
-		ms, err := skillregistry.ParseInstalled(a)
+		ms, err := skillregistry.ParseInstalledFor(a, scope, args.WorkspaceRoot)
 		if err != nil {
 			return err
 		}

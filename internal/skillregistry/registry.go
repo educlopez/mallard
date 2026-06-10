@@ -88,13 +88,23 @@ func ParseSource(repoRoot string) ([]Manifest, error) {
 	return out, nil
 }
 
-// ParseInstalled walks the adapter's SkillsDir and CommandsDir one level deep
-// and parses any symlink targeting a mallard source file. Non-symlink entries
-// are skipped (doctor surfaces them as drift).
+// ParseInstalled walks the adapter's global SkillsDir, CommandsDir, and
+// AgentsDir one level deep and parses any symlink targeting a mallard source
+// file. Non-symlink entries are skipped (doctor surfaces them as drift).
+// For scope-aware behaviour use ParseInstalledFor.
 func ParseInstalled(adapter agents.Adapter) ([]Manifest, error) {
+	return ParseInstalledFor(adapter, agents.ScopeGlobal, "")
+}
+
+// ParseInstalledFor is like ParseInstalled but resolves directories using the
+// scope-aware *DirFor methods, mirroring how Doctor and the updater operate.
+func ParseInstalledFor(adapter agents.Adapter, scope agents.Scope, workspaceRoot string) ([]Manifest, error) {
+	if scope == "" {
+		scope = agents.ScopeGlobal
+	}
 	var out []Manifest
 
-	skillsDir := adapter.SkillsDir()
+	skillsDir := adapter.SkillsDirFor(scope, workspaceRoot)
 	if skillsDir != "" {
 		ms, err := walkInstalledDir(skillsDir, "skill")
 		if err != nil {
@@ -103,7 +113,7 @@ func ParseInstalled(adapter agents.Adapter) ([]Manifest, error) {
 		out = append(out, ms...)
 	}
 
-	commandsDir := adapter.CommandsDir()
+	commandsDir := adapter.CommandsDirFor(scope, workspaceRoot)
 	if commandsDir != "" {
 		ms, err := walkInstalledDir(commandsDir, "command")
 		if err != nil {
@@ -112,7 +122,7 @@ func ParseInstalled(adapter agents.Adapter) ([]Manifest, error) {
 		out = append(out, ms...)
 	}
 
-	agentsDir := adapter.AgentsDir()
+	agentsDir := adapter.AgentsDirFor(scope, workspaceRoot)
 	if agentsDir != "" {
 		ms, err := walkInstalledDir(agentsDir, "agent")
 		if err != nil {
@@ -245,13 +255,13 @@ func parseFrontmatter(data []byte) map[string]string {
 			}
 			continue
 		}
-		idx := strings.Index(trimmed, ":")
-		if idx < 0 {
+		parts := strings.SplitN(trimmed, ":", 2)
+		if len(parts) < 2 {
 			continue
 		}
 		flush()
-		key := strings.TrimSpace(trimmed[:idx])
-		value := strings.TrimSpace(trimmed[idx+1:])
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
 		if value == ">" || value == "|" || value == ">-" || value == "|-" {
 			currentKey = key
 			continue
