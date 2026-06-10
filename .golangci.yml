@@ -1,0 +1,50 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - unused
+
+  settings:
+    misspell:
+      locale: US
+
+  exclusions:
+    # Ignore unchecked error returns on defer Close/Remove calls — a common
+    # Go idiom where checking in defer would hide the real return value.
+    # Ignore unchecked fmt.Fprint* errors — terminal report helpers cannot
+    # usefully act on a write error to an io.Writer.
+    rules:
+      - linters:
+          - errcheck
+        text: "Error return value of `.*\\.Close` is not checked"
+      - linters:
+          - errcheck
+        text: "Error return value of `.*\\.Remove` is not checked"
+      - linters:
+          - errcheck
+        text: "Error return value of `fmt\\.F"
+
+      # "behaviour" is valid British English; suppress the locale warning in
+      # existing code that uses it consistently.
+      - linters:
+          - misspell
+        text: "`behaviour` is a misspelling"
+
+      # "hardlinked" is the correct technical term for a hard-link file
+      # reference; misspell incorrectly flags it as "hardline".
+      - linters:
+          - misspell
+        text: "`hardlinked` is a misspelling"
+
+      # Suppress staticcheck style suggestions (QF*) in existing code — these
+      # are minor style improvements, not correctness issues.
+      - linters:
+          - staticcheck
+        text: "^QF"
+
