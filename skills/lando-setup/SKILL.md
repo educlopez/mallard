@@ -8,7 +8,7 @@ description: >
   "prepara en local", "levanta el lando de X", "configura X en local", "actualízame
   la DB", "refresca la DB de X", "bájame la DB de X", "sync DB", or "quiero la DB
   actualizada de X".
-version: "0.1.0"
+version: "0.2.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -303,6 +303,18 @@ server {
 
     charset utf-8;
 
+    # Upstream PHP-FPM — SIEMPRE así, nunca "fastcgi_pass appserver:9000":
+    # 1) El alias "appserver" existe en la red compartida del proxy de Lando para
+    #    CADA app corriendo → Docker DNS puede devolver el appserver de OTRO
+    #    proyecto (502 connection refused). "fpm" solo existe en la red privada
+    #    del proyecto, no puede colisionar.
+    # 2) Variable + resolver fuerzan resolución DNS por petición. Con hostname
+    #    literal, nginx resuelve UNA vez al arrancar y cachea la IP — si el
+    #    appserver arranca después o cambia de IP en un restart, nginx apunta
+    #    a una IP stale (502 hasta reiniciar nginx).
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $fpm_upstream fpm:9000;
+
     # Placeholder — friendly URLs: /{id}-{type}_default/...
     location ~* ^/[0-9]+-[a-z]+_default.*\.(jpg|jpeg|png|gif|webp)$ {
         try_files $uri /img/placeholder-dev.jpg;
@@ -339,7 +351,7 @@ server {
 
     # Admin: non-index PHP files (filemanager/dialog.php, etc.)
     location ~* ^/admin[-_\w]*/(?!index\.php).+\.php(/|$) {
-        fastcgi_pass fpm:9000;
+        fastcgi_pass $fpm_upstream;
         fastcgi_split_path_info ^(.+\.php)(/.*)$;
         fastcgi_buffers 32 32k;
         fastcgi_buffer_size 32k;
@@ -357,7 +369,7 @@ server {
 
     # Admin: index.php (PS9 Symfony routing entry point)
     location ~* ^/admin[-_\w]*/index\.php(/|$) {
-        fastcgi_pass fpm:9000;
+        fastcgi_pass $fpm_upstream;
         fastcgi_split_path_info ^(.+\.php)(/.*)$;
         fastcgi_buffers 32 32k;
         fastcgi_buffer_size 32k;
@@ -389,7 +401,7 @@ server {
     # PHP via FPM
     location ~ \.php$ {
         try_files $uri /index.php =404;
-        fastcgi_pass fpm:9000;
+        fastcgi_pass $fpm_upstream;
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
         fastcgi_buffers 32 32k;
         fastcgi_buffer_size 32k;
@@ -594,4 +606,26 @@ Delete dump (only if import verified): `rm ~/developer/{workspace}/{project-name
 - Large DBs (>500MB) can take 5+ min to import — normal
 - If shop shows wrong theme/images: check module status or trigger `lando-img-placeholder` skill
 - If `lando db-import` hangs > 30min: check disk space with `lando exec appserver df -h`
+
+### Troubleshooting — 502 en lemp con varios proyectos Lando a la vez
+
+Síntoma: healthchecks de `lando start` fallan con 502 y el log de nginx muestra
+`connect() failed (111: Connection refused) ... upstream: "fastcgi://<IP>:9000"`.
+
+Diagnóstico: comparar esa IP contra
+`docker network inspect landoproxyhyperion5000gandalfedition_edge -f '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'`.
+Si la IP pertenece al appserver de OTRO proyecto → colisión de alias DNS.
+
+Causa: `fastcgi_pass appserver:9000` (o cualquier hostname literal). El alias
+`appserver` existe en la red compartida del proxy para cada app Lando corriendo,
+y nginx además cachea la IP al arrancar (resolución estática). Doble fallo:
+puede resolver al contenedor equivocado, o quedarse con una IP stale tras un
+restart.
+
+Fix: el patrón `resolver 127.0.0.11` + `set $fpm_upstream fpm:9000` +
+`fastcgi_pass $fpm_upstream` que ya incluye la plantilla de
+`.lando/nginx-site.conf` de esta skill (Step 9). En proyectos antiguos con el
+vhost viejo, aplicar ese mismo cambio y `lando restart`.
+NO sirve usar el FQDN `appserver.{app}.internal` — ese alias puede no apuntar
+al contenedor FPM y sigue siendo resolución estática.
 - `lando db-import` only accepts paths inside the project directory — always dump to project root as `dump.sql`
