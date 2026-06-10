@@ -93,10 +93,6 @@ var (
 			Foreground(colorTitle).
 			MarginBottom(1)
 
-	styleSubtitle = lipgloss.NewStyle().
-			Foreground(colorMuted).
-			MarginBottom(1)
-
 	styleSuccess = lipgloss.NewStyle().
 			Foreground(colorSuccess)
 

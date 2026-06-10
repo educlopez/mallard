@@ -224,11 +224,15 @@ func applyItem(it *PlanItem, session *backup.Session) {
 			it.Err = err
 		}
 	case ClassReplace:
-		if _, err := session.Snapshot(it.Agent, it.Kind, it.Dst); err != nil {
+		snap, err := session.Snapshot(it.Agent, it.Kind, it.Dst)
+		if err != nil {
 			it.Err = fmt.Errorf("backup: %w", err)
 			return
 		}
 		if err := os.RemoveAll(it.Dst); err != nil {
+			// RemoveAll failed; the original is still present. Discard the
+			// snapshot entry so it does not appear as a backup hit in the report.
+			session.DiscardEntry(snap)
 			it.Err = fmt.Errorf("remove original: %w", err)
 			return
 		}

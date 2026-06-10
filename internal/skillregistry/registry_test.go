@@ -72,6 +72,23 @@ func TestParseFrontmatter(t *testing.T) {
 			keysAbsent: []string{"author", "license"},
 		},
 		{
+			name: "value with colon is preserved",
+			in:   "---\nname: foo\ndescription: foo: bar baz\nversion: 1.0.0\n---\n",
+			want: map[string]string{
+				"name":        "foo",
+				"description": "foo: bar baz",
+				"version":     "1.0.0",
+			},
+		},
+		{
+			name: "quoted value with colon is unquoted",
+			in:   "---\nname: foo\ndescription: \"hello: world\"\n---\n",
+			want: map[string]string{
+				"name":        "foo",
+				"description": "hello: world",
+			},
+		},
+		{
 			// A folded description preceding a nested metadata block must not
 			// swallow the nested lines past the next top-level key.
 			name: "folded description then nested metadata",

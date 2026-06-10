@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -56,7 +57,6 @@ type Model struct {
 
 	// Installing / Done
 	results []skills.LinkResult
-	done    bool
 
 	// Update flow
 	updatePlan    *updater.Report
@@ -456,6 +456,9 @@ func (m Model) loadSkillsScreen() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleSkillsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if len(m.allSkills) == 0 {
+		return m, nil
+	}
 	switch msg.String() {
 	case "up", "k":
 		if m.skillCursor > 0 {
@@ -838,11 +841,7 @@ func backupStamp(dir string) string {
 	if dir == "" {
 		return ""
 	}
-	idx := strings.LastIndex(dir, "/")
-	if idx < 0 || idx == len(dir)-1 {
-		return dir
-	}
-	return dir[idx+1:]
+	return filepath.Base(dir)
 }
 
 // scrollViewportHeight is the number of body lines rendered inside the
