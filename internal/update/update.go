@@ -2,7 +2,8 @@
 //
 // It queries the GitHub releases API for the latest tag, compares it against
 // the running version, and — when newer — downloads the matching release asset,
-// extracts the mallard binary, and atomically replaces the running executable.
+// verifies its SHA-256 against checksums.txt, extracts the mallard binary, and
+// atomically replaces the running executable.
 //
 // The package is dependency-free (stdlib only). The HTTP client and the
 // "current executable path" resolver are package-level vars so tests can inject
@@ -14,6 +15,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,15 +26,33 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
+)
+
+// repoOwner/repoName identify the GitHub repository releases are fetched from.
+const (
+	repoOwner = "educlopez"
+	repoName  = "mallard"
 )
 
 // releasesURL is the GitHub API endpoint for the latest mallard release.
-const releasesURL = "https://api.github.com/repos/educlopez/mallard/releases/latest"
+const releasesURL = "https://api.github.com/repos/" + repoOwner + "/" + repoName + "/releases/latest"
+
+// Body-read limits to cap memory usage and guard against malicious/corrupt responses.
+const (
+	maxAPIBodyBytes     = 10 * 1024 * 1024  // 10 MB — GitHub releases JSON
+	maxArchiveBytes     = 200 * 1024 * 1024 // 200 MB — release archive download
+	maxChecksumBytes    = 1 * 1024 * 1024   // 1 MB — checksums.txt
+	maxBinaryEntryBytes = 200 * 1024 * 1024 // 200 MB — extracted binary entry
+)
 
 // Injection points for testing. Tests override these to avoid the network and
 // to control which executable path the self-replace logic sees.
 var (
-	httpClient = http.DefaultClient
+	// httpClient is the HTTP client used for all outbound requests.
+	// It carries a generous timeout so a stalled server does not hang the CLI
+	// indefinitely; tests replace it with a mock transport.
+	httpClient = &http.Client{Timeout: 120 * time.Second}
 	// executablePath resolves the path of the currently running binary.
 	executablePath = os.Executable
 )
@@ -102,12 +123,11 @@ func Run(w io.Writer, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("resolve current executable: %w", err)
 	}
-	exe, err = filepath.EvalSymlinks(exe)
-	if err == nil {
-		// Use the resolved real path so brew/scoop detection sees the cellar.
-	} else {
-		exe, _ = executablePath()
+	resolved, err := filepath.EvalSymlinks(exe)
+	if err != nil {
+		return fmt.Errorf("resolve symlinks for %s: %w", exe, err)
 	}
+	exe = resolved
 
 	// Package-manager guard: never self-replace a brew/scoop-managed binary.
 	if mgr := detectPackageManager(exe); mgr != "" {
@@ -125,7 +145,7 @@ func Run(w io.Writer, opts Options) error {
 		return nil
 	}
 
-	if err := downloadAndReplace(w, a, exe); err != nil {
+	if err := downloadAndReplace(w, rel, a, exe); err != nil {
 		return err
 	}
 	fmt.Fprintf(w, "  Upgraded to %s.\n", latest)
@@ -149,7 +169,7 @@ func fetchLatest() (release, error) {
 	if resp.StatusCode != http.StatusOK {
 		return release{}, fmt.Errorf("github API returned status %d", resp.StatusCode)
 	}
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAPIBodyBytes))
 	if err != nil {
 		return release{}, err
 	}
@@ -271,13 +291,84 @@ func selectAsset(assets []asset, goos, goarch string) (asset, error) {
 	return asset{}, fmt.Errorf("no release asset found for %s/%s (looked for *%s)", goos, goarch, infix)
 }
 
-// downloadAndReplace downloads the asset, extracts the mallard binary, writes it
-// to a temp file beside exe, chmod +x, and atomically renames it over exe.
-func downloadAndReplace(w io.Writer, a asset, exe string) error {
+// checksumAssetURL returns the download URL for checksums.txt by looking for
+// it in the release asset list, or falls back to a predictable URL pattern.
+func checksumAssetURL(assets []asset, tagName string) string {
+	for _, a := range assets {
+		if a.Name == "checksums.txt" {
+			return a.BrowserDownloadURL
+		}
+	}
+	// Fallback: construct the URL from the known pattern.
+	return fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/checksums.txt", repoOwner, repoName, tagName)
+}
+
+// verifyChecksum downloads checksums.txt from the release, finds the entry for
+// archiveName, and verifies that the SHA-256 of archiveData matches. It returns
+// an error if checksums.txt cannot be fetched, the entry is missing, or the
+// digest does not match.
+func verifyChecksum(assets []asset, tagName, archiveName string, archiveData []byte) error {
+	url := checksumAssetURL(assets, tagName)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("build checksums.txt request: %w", err)
+	}
+	req.Header.Set("User-Agent", "mallard-upgrade")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("download checksums.txt: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("checksums.txt download returned status %d", resp.StatusCode)
+	}
+
+	body, err := readCapped(resp.Body, maxChecksumBytes)
+	if err != nil {
+		return fmt.Errorf("read checksums.txt: %w", err)
+	}
+
+	// Parse the goreleaser checksum format: "<hex>  <filename>" (two spaces).
+	var expected string
+	for _, line := range strings.Split(string(body), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// Accept both single-space and double-space separators.
+		parts := strings.Fields(line)
+		if len(parts) == 2 && parts[1] == archiveName {
+			expected = parts[0]
+			break
+		}
+	}
+	if expected == "" {
+		return fmt.Errorf("archive %q not found in checksums.txt — refusing to install unverified binary", archiveName)
+	}
+
+	sum := sha256.Sum256(archiveData)
+	actual := hex.EncodeToString(sum[:])
+	if actual != expected {
+		return fmt.Errorf("checksum mismatch for %s:\n  expected: %s\n  got:      %s", archiveName, expected, actual)
+	}
+	return nil
+}
+
+// downloadAndReplace downloads the asset, verifies its checksum, extracts the
+// mallard binary, writes it to a temp file beside exe, chmod +x, and atomically
+// renames it over exe.
+func downloadAndReplace(w io.Writer, rel release, a asset, exe string) error {
 	fmt.Fprintf(w, "  Downloading %s ...\n", a.Name)
-	data, err := download(a.BrowserDownloadURL)
+	data, err := download(a.BrowserDownloadURL, maxArchiveBytes)
 	if err != nil {
 		return fmt.Errorf("download asset: %w", err)
+	}
+
+	fmt.Fprintf(w, "  Verifying checksum ...\n")
+	if err := verifyChecksum(rel.Assets, rel.TagName, a.Name, data); err != nil {
+		return fmt.Errorf("checksum verification: %w", err)
 	}
 
 	bin, err := extractBinary(a.Name, data)
@@ -309,8 +400,21 @@ func downloadAndReplace(w io.Writer, a asset, exe string) error {
 	return nil
 }
 
-// download fetches the asset bytes via the injectable client.
-func download(url string) ([]byte, error) {
+// readCapped reads at most limit bytes from r and returns an explicit error if
+// the stream holds more, instead of silently truncating the data.
+func readCapped(r io.Reader, limit int64) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("response exceeds %d byte limit", limit)
+	}
+	return data, nil
+}
+
+// download fetches the URL bytes via the injectable client, capped at limit bytes.
+func download(url string, limit int64) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -324,7 +428,7 @@ func download(url string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("download returned status %d", resp.StatusCode)
 	}
-	return io.ReadAll(resp.Body)
+	return readCapped(resp.Body, limit)
 }
 
 // extractBinary pulls the mallard executable out of a .tar.gz or .zip archive.
@@ -361,7 +465,7 @@ func extractFromTarGz(data []byte) ([]byte, error) {
 			return nil, err
 		}
 		if filepath.Base(hdr.Name) == want {
-			return io.ReadAll(tr)
+			return readCapped(tr, maxBinaryEntryBytes)
 		}
 	}
 	return nil, fmt.Errorf("binary %q not found in archive", want)
@@ -380,7 +484,7 @@ func extractFromZip(data []byte) ([]byte, error) {
 				return nil, err
 			}
 			defer rc.Close()
-			return io.ReadAll(rc)
+			return readCapped(rc, maxBinaryEntryBytes)
 		}
 	}
 	return nil, fmt.Errorf("binary %q not found in archive", want)
