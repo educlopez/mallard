@@ -37,7 +37,24 @@ Covers: pnpm 11 supply chain, Trivy weekly scan, HTML email reports via Gmail.
 ### `pnpm-workspace.yaml` (create or update)
 
 ```yaml
-minimumReleaseAge: 2880   # packages must be 48h old before install (minutes)
+# WARNING: single-package repos do NOT need a `packages:` block on pnpm 11.
+# BUT on pnpm 9 (Vercel default for older projects) the mere presence of this
+# file REQUIRES a non-empty `packages:` or install dies with
+# "packages field missing or empty". If targeting pnpm 9, add `packages: ['.']`.
+
+minimumReleaseAge: 4320   # packages must be 72h old before install (minutes)
+
+# Block transitive deps from git repos / raw tarball URLs (needs pnpm 10.26+,
+# silently inert below). See supply-chain-security skill for the full checklist.
+blockExoticSubdeps: true
+
+# Allowlist for postinstall/build scripts. pnpm 10+ blocks ALL by default.
+# List ONLY packages that genuinely need to compile. pnpm will prompt you to
+# add new entries when you install a dep with a blocked build script.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  # lightningcss-cli: true   # uncomment if using lightningcss
 
 overrides:
   form-data: ">=4.0.4"
@@ -48,18 +65,23 @@ overrides:
 ```
 
 **Rules:**
-- `minimumReleaseAge` is in **minutes** (2880 = 48h). Blocks supply chain attacks via typosquatting/fast-publish.
+- `minimumReleaseAge` is in **minutes** (4320 = 72h). Blocks supply chain attacks via typosquatting/fast-publish.
+- `blockExoticSubdeps` needs pnpm 10.26+ — silently inert below. Check the pinned version.
+- `allowBuilds` — pnpm 10+ blocks all postinstall scripts by default. Add ONLY packages that need to compile. pnpm 11 will tell you during install if a new dep needs adding here.
 - `overrides` pins known vulnerable transitive deps. Add new entries as CVEs appear.
 - Do NOT put `minimumReleaseAge` in `.npmrc` — pnpm 11 reads it from `pnpm-workspace.yaml` only.
+- **Real test is CI**: `pnpm install --frozen-lockfile` on a clean machine enforces all policies; a warm local cache skips them.
 
 ### `package.json` additions
 
 ```json
 {
-  "packageManager": "pnpm@11.x.x"
+  "packageManager": "pnpm@11.1.2",
+  "private": true
 }
 ```
 
+Pin the **exact** version (not `11.x.x`) so CI/Vercel use the version you tested.
 Remove any `overrides` or `pnpm.overrides` blocks from `package.json` — they belong in `pnpm-workspace.yaml` for pnpm 11.
 
 ### `publicar` deploy script (if project has one)
@@ -408,8 +430,9 @@ When the scan reports a fixable HIGH/CRITICAL on a transitive dep:
 
 ## Checklist for new project
 
-- [ ] `pnpm-workspace.yaml` created with `minimumReleaseAge: 2880` + overrides
-- [ ] `package.json` has `"packageManager": "pnpm@11.x.x"`, no `overrides` block
+- [ ] `pnpm-workspace.yaml` created with `minimumReleaseAge: 4320` + `blockExoticSubdeps: true` + `overrides` + `allowBuilds` (add only what compiles)
+- [ ] `package.json` has `"packageManager": "pnpm@11.x.x"` (exact version), `"private": true`, no `overrides` block
+- [ ] Verified with clean `pnpm install --frozen-lockfile` (not just warm cache)
 - [ ] `.gitlab-ci.yml` has `dependency-scan` job (Step 2)
 - [ ] GitLab CI/CD variables set: `GMAIL_USER`, `GMAIL_APP_PASS`, `REPORT_RECIPIENTS`
 - [ ] Pipeline schedule created (Monday 8am Madrid)
