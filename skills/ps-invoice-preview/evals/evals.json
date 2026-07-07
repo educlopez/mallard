@@ -1,0 +1,23 @@
+{
+  "skill_name": "ps-invoice-preview",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Necesito ver cómo queda el PDF de la factura sin tener que ir al backoffice cada vez que cambio el .tpl. Móntame algo para PrestaShop.",
+      "expected_output": "Genera invoice-preview/index.php en el proyecto PS con el visor completo (sidebar de pedidos, iframe de PDF, botón generar factura). No pide ni sustituye placeholders. Comunica URL de acceso y dónde van los overrides de tema.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Quiero quitar la columna de impuestos de la tabla de productos en la factura PDF, pero sin desactivar los impuestos de la tienda.",
+      "expected_output": "Crea override themes/{child}/pdf/invoice.product-tab.tpl reutilizando el layout que el core aplica cuando isTaxEnabled es false (fusiona el ancho de tax_code en la columna de producto), sin tocar PS_TAX. Sugiere probar el resultado con el invoice-preview si no existe, o generarlo.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Estoy tocando pdf/footer.tpl de PrestaShop para quitar el texto de contacto de soporte de la factura, avísame si afecta a algo más.",
+      "expected_output": "Advierte que footer.tpl es compartido por todos los tipos de documento PDF (factura, albarán, abono, devolución), no solo la factura, antes de aplicar el cambio.",
+      "files": []
+    }
+  ]
+}
