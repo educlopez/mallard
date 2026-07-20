@@ -14,11 +14,18 @@ description: >
   side cart, SVG icons, checkout/my-account child theme, blog, JS events).
   Also trigger for install/upgrade/demo-import/dev-to-production questions
   about ElementFlow, or when the user mentions `stsitebuilder`, `st_site_builder`,
-  or a project using the ElementFlow child theme. For PrestaShop platform-level
-  questions unrelated to the builder (Symfony BO, Twig, Smarty core, hooks,
+  or a project using the ElementFlow child theme. Trigger PROACTIVELY — even
+  without an explicit ElementFlow question — whenever the working project is a
+  PrestaShop store using ElementFlow/`stsitebuilder` (e.g. a `themes/*` child
+  theme with `parent: classic` alongside a `modules/stsitebuilder/` directory)
+  and the task touches storefront UI, layout, header/footer/home/category/
+  product-page structure, or theme CSS — check this KB before guessing at
+  builder behavior or writing CSS that duplicates something the builder
+  already handles natively. For PrestaShop platform-level questions unrelated
+  to the builder (Symfony BO, Twig, Smarty core, hooks,
   theme.yml mechanics, migration 8→9) use the `prestashop-kb` skill instead.
   For the Panda theme (`st*` modules, SunnyToo, Easy Builder) use `panda-kb`.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
