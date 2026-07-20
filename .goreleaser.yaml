@@ -43,7 +43,7 @@ signs:
       - sign-blob
       - "--output-certificate=${certificate}"
       - "--output-signature=${signature}"
-      - "--new-bundle-format=false"
+      - "--use-signing-config=false"
       - "${artifact}"
       - "--yes"
     artifacts: checksum
