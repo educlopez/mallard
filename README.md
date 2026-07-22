@@ -113,6 +113,9 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `ps-watch` | BrowserSync live-reload watcher for Panda child theme development in Lando |
 | `panda-kb` | Knowledge base for the Panda theme by SunnyToo (st* modules, Easy Builder, demos) |
 | `prestashop-kb` | Knowledge base for the PrestaShop 8/9 platform (Symfony, Twig BO, Smarty, hooks, migration) |
+| `task-context` | Turn an Intervals task into a brief + git branch + route to the right skill; log time on finish (powers `/task`) |
+| `ps-project-doc` | Generate a standardized, private (gitignored) `CLAUDE.md` for a PS repo by introspection |
+| `ps-new-project` | Scaffold a new PS client project: child theme (panda/elementflow) + CSS build + CLAUDE.md |
 
 ## Commands
 
@@ -123,16 +126,21 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `/ps-url` | PrestaShop URL utilities |
 | `/panda` | Ask the `panda-expert` agent (Panda theme + Easy Builder + st* modules) |
 | `/ps` | Ask the `prestashop-expert` agent (PS 8/9 core: Symfony, Twig, Smarty, hooks, migration) |
+| `/task` | Turn an Intervals task into ready-to-work context (brief, branch, route, time logging) |
+| `/project-doc` | Generate a standardized, private `CLAUDE.md` for the current PS repo |
+| `/new-project` | Scaffold day-1 setup for a new PS project (child theme, CSS build, docs) |
 
 ## Agents
 
-Claude Code subagents, symlinked to `~/.claude/agents/` (Claude only). Both are CWD-first
-(inspect project source before relying on KB snapshots) and consult the bundled `*-kb` skills.
+Claude Code subagents, symlinked to `~/.claude/agents/` (Claude only). The `*-expert` agents are
+CWD-first (inspect project source before relying on KB snapshots) and consult the bundled `*-kb` skills.
 
 | Agent | Domain |
 |-------|--------|
 | `panda-expert` | Panda theme by SunnyToo, `st*` modules, Easy Builder, SunnyToo demos |
 | `prestashop-expert` | PrestaShop 8/9 core: themes, parent-child, Symfony BO, Twig, Smarty, hooks, modules, migration 8→9 |
+| `task-classifier` | Classify an Intervals task into a work type to route it (used by `/task`) |
+| `layout-builder` | Implement storefront layout/CSS on a PS child theme (Panda or ElementFlow) |
 
 The knowledge base lives in-repo under `skills/panda-kb/references/` and
 `skills/prestashop-kb/references/` — that's the source of truth. Edit it directly; no
