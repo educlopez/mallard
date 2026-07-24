@@ -160,11 +160,48 @@ def detect_locales_fs(base: str) -> list[str]:
     return sorted(found)
 
 
+def detect_locales_lando(base: str) -> list[str] | None:
+    """Consulta ps_lang.locale vía `lando mysql` cuando el proyecto corre en Lando.
+
+    `database_host` en parameters.php suele ser el nombre del servicio Docker interno
+    (p.ej. "database"), no resoluble desde el host — pymysql directo falla ahí incluso
+    con la DB corriendo y accesible. `lando mysql` sí sabe entrar al contenedor, así
+    que es el fallback correcto para desarrollo local antes de darse por vencido y
+    caer a filesystem (que solo ve qué locales YA tienen carpeta de traducciones, no
+    los idiomas realmente activos en la tienda).
+    """
+    if not os.path.isfile(os.path.join(base, '.lando.yml')):
+        return None
+    params = read_parameters(base)
+    if not params or not params.get('database_name'):
+        return None
+    prefix = params.get('database_prefix', 'ps_')
+    try:
+        import shutil
+        import subprocess
+        if not shutil.which('lando'):
+            return None
+        result = subprocess.run(
+            ['lando', 'mysql', params['database_name'], '-N', '-e',
+             f"SELECT locale FROM `{prefix}lang` WHERE active = 1 AND locale <> ''"],
+            cwd=base, capture_output=True, text=True, timeout=20,
+        )
+        if result.returncode != 0:
+            return None
+        rows = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        return sorted(set(rows)) or None
+    except Exception:
+        return None
+
+
 def detect_locales(base: str) -> tuple[list[str], str]:
-    """Devuelve (locales, source). DB primero, fallback filesystem."""
+    """Devuelve (locales, source). DB directa primero, luego `lando mysql`, luego filesystem."""
     db = detect_locales_db(base)
     if db:
         return db, 'db'
+    lando = detect_locales_lando(base)
+    if lando:
+        return lando, 'db (lando)'
     return detect_locales_fs(base), 'filesystem'
 
 

@@ -11,7 +11,7 @@ description: >
   "ps-translate", "traducir prestashop", "traducir a francés/alemán/español", "i18n
   pendiente", "hay textos sin traducir en la tienda", "¿qué strings faltan por
   traducir?" o cuando vea texto sin traducir en el storefront.
-version: "2.0.0"
+version: "2.0.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -36,9 +36,16 @@ Devuelve el child theme, su parent, y los locales instalados:
   "locales": ["es-ES", "fr-FR", "de-DE"], "source": "db" }
 ```
 
-- `source: "db"` → leído de `ps_lang` (idiomas realmente activos). Requiere `pymysql`
-  y DB accesible; en Lando el host suele ser interno y caerá a filesystem — normal.
-- `source: "filesystem"` → deducido de los dirs `translations/<locale>/`.
+- `source: "db"` → conexión directa vía `pymysql` (requiere el host de DB accesible
+  desde donde corre el script — típico en instalaciones no-Lando o con DB expuesta).
+- `source: "db (lando)"` → cuando `database_host` es el nombre del servicio Docker
+  interno (no resoluble desde el host), se usa `lando mysql <db> -e "..."` en su
+  lugar — esto SÍ ve los idiomas realmente activos en `ps_lang`, no adivines por
+  `source: "filesystem"` que no hay forma de saberlo en un proyecto Lando.
+- `source: "filesystem"` → último recurso: deducido de qué dirs `translations/<locale>/`
+  ya existen. Solo dice qué locales YA tienen alguna traducción empezada, NO qué
+  idiomas están realmente activos en la tienda — si el proyecto usa Lando y esto
+  aparece, algo falló antes (revisa que `.lando.yml` exista y `lando` esté en el PATH).
 
 **Luego decide el/los idioma(s) objetivo:**
 - Si hay UN solo locale (aparte de `en-US`) → úsalo directo.
