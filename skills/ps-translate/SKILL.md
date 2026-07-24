@@ -3,15 +3,19 @@ name: ps-translate
 description: >
   Automatiza la detección y traducción de strings sin traducir en una instalación
   PrestaShop, a CUALQUIER idioma. Detecta el child theme y los locales instalados
-  (DB ps_lang con fallback a filesystem), escanea templates .tpl buscando llamadas
-  {l s='...' d='...'} del sistema i18n de PS, compara contra los XLF existentes del
-  locale objetivo y traduce los strings faltantes usando Claude de forma nativa —
-  sin API key externa. Soporta varios idiomas en una sola corrida.
+  (DB ps_lang con fallback a filesystem/lando mysql), escanea templates .tpl
+  (Smarty {l s='...' d='...'}) Y, con --include-emails, plantillas de email Twig
+  (mails/themes/**/*.twig), incluyendo también las facturas/albaranes PDF de la
+  raíz /pdf/**/*.tpl que antes se pasaban por alto. Compara contra los XLF
+  existentes del locale objetivo y traduce los strings faltantes usando Claude
+  de forma nativa — sin API key externa. Soporta varios idiomas en una sola corrida.
   Usa esta skill cuando el usuario mencione: "traducciones PS", "strings en inglés",
   "ps-translate", "traducir prestashop", "traducir a francés/alemán/español", "i18n
   pendiente", "hay textos sin traducir en la tienda", "¿qué strings faltan por
-  traducir?" o cuando vea texto sin traducir en el storefront.
-version: "2.0.1"
+  traducir?", "traducir facturas/PDF", "traducir emails/correos de PrestaShop",
+  o cuando vea texto sin traducir en el storefront, en una factura PDF, o en un
+  email transaccional.
+version: "2.2.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -71,6 +75,7 @@ python3 ~/.claude/skills/ps-translate/scripts/scan.py \
 | `--domain` | todos | Filtrar por dominio (ej. `ShopThemeCatalog`) |
 | `--output` | stdout | Ruta a fichero JSON de salida |
 | `--include-admin` | false | Incluir dominios de backoffice |
+| `--include-emails` | false | Incluir plantillas de email Twig (`mails/themes/**/*.twig`, dominio `Emails.Body`) — ver sección "Facturas PDF y emails" |
 
 > **Consejo:** empieza con `--theme-only`. Sin él, el scan incluye TODOS los strings de
 > módulos terceros (mailchimp, paypal, feeds…) que suelen ser miles y muchos ya vienen
@@ -134,6 +139,126 @@ correspondiente, y corre `write_xlf.py` una vez por locale.
 
 ---
 
+## Facturas PDF y emails transaccionales
+
+Estos dos NO son un mecanismo aparte que necesite un sub-skill propio — son el
+MISMO sistema de dominios/XLF que todo lo demás, solo que las plantillas viven
+fuera de `themes/**` y `modules/**` (donde el scanner mira por defecto) y, en el
+caso de emails, usan una sintaxis de traducción distinta (Twig en vez de Smarty).
+Por eso está resuelto ampliando `scan.py`, no creando skills nuevas.
+
+**Facturas PDF** — ya cubierto automáticamente, sin flag extra:
+- Viven en la raíz `/pdf/**/*.tpl` (fuera de `themes/`/`modules/`, por eso antes
+  el scanner las pasaba por alto por completo — un `--domain Shop.Pdf` sin este
+  fix solo encontraba strings de módulos de terceros con ese mismo dominio, ej.
+  `psgdpr`, NO la factura real).
+- Usan `{l s='...' d='Shop.Pdf'}` igual que el resto — un scan normal (con o sin
+  `--theme-only`, ya que `Shop.Pdf` empieza por `Shop.`) ya las incluye.
+- Overrides de PDF a nivel child-theme (`themes/<theme>/pdf/**`) ya estaban
+  cubiertos por el glob de `themes/**/*.tpl` de siempre.
+
+**Emails transaccionales** — requiere `--include-emails`, y ANTES de nada
+comprueba qué motor de email usa el proyecto:
+
+```sql
+SELECT value FROM ps_configuration WHERE name = 'PS_MAIL_THEME';
+```
+
+- `modern` / `classic` → el proyecto usa el sistema Twig de PS 8/9
+  (`mails/themes/<theme>/**/*.twig`), **agnóstico de idioma** (un solo fichero
+  sirve para todos los locales; `locale` es una variable Twig). Los ficheros
+  REALES por idioma que `Mail::send()` usa (`mails/<lang>/*.html`+`.txt`) no
+  existen hasta que se GENERAN desde esos layouts — ver "Generación de plantillas"
+  más abajo, es un paso aparte, no basta con tener el XLF traducido.
+- Si el proyecto tiene una carpeta `mails/<lang>/*.html` + `.txt` POBLADA (ficheros
+  reales, no solo `index.php`), puede estar en el sistema LEGACY de plantillas
+  duplicadas por idioma — en ese caso, antes de asumir que hace falta traducir esos
+  ficheros, compara los nombres contra `mails/themes/<theme activo>/core/*.html.twig`:
+  si CADA fichero legacy tiene su equivalente Twig, el legacy está muerto/sin usar
+  (el motor Twig activo tiene prioridad) y no hace falta tocarlo. Si encuentras
+  ficheros legacy SIN equivalente Twig (típico de módulos que no migraron), esos sí
+  se traducen duplicando el fichero completo por idioma — mecanismo manual, fuera
+  del alcance de scan.py/write_xlf.py (no son strings sueltos, son ficheros enteros).
+- Las líneas de ASUNTO (`Emails.Subject`) se fijan en PHP core
+  (`$translator->trans('...', [], 'Emails.Subject')` dentro de clases como
+  `SendProcessOrderEmailHandler`), no en las plantillas — no son escaneables por
+  `scan.py`. Vienen ya traducidas en el paquete de idioma OFICIAL de PrestaShop
+  para ese locale; si ese paquete no está instalado (comprueba si existe
+  `translations/<locale>/` en la raíz del core, no solo en el theme), ni esto ni
+  nada de este skill lo puede completar — es instalar el paquete oficial desde
+  Admin → Internacional → Traducciones, no un gap de contenido que traducir a mano.
+
+### El dominio de emails va en CORE, no en el theme — excepción confirmada empíricamente
+
+`Emails.Body` (y cualquier otro dominio referenciado desde una plantilla de email,
+ver más abajo) se resuelve, durante `prestashop:mail:generate`, por un traductor
+Symfony que **NO lee `themes/<theme>/translations/` en absoluto** — probado
+directamente: ni con el nombre de fichero con puntos (`Emails.Body.fr-FR.xlf`) ni
+sin puntos (`EmailsBody.fr-FR.xlf`), colocado en la carpeta del theme, cambió nada;
+solo funcionó al ponerlo en la raíz `translations/<locale>/`. Esto contradice la
+norma general de este skill ("nunca tocar core") — es una excepción deliberada y
+limitada SOLO a los dominios de email, confirmada comparando contra el paquete
+oficial es-ES (`translations/es-ES/EmailsBody.es-ES.xlf` — sin puntos, exactamente
+la convención `MailsBodyProviderDefinition::FILENAME_FILTERS_REGEX = ['#EmailsBody*#']`
+del código fuente de PS9).
+
+**Un email puede referenciar MÁS de un dominio.** Algunos layouts arman un `%label%`
+traducido con un `|trans()` ANIDADO usando OTRO dominio (ej. `order_conf.html.twig`
+construye `%order_history_label%` desde `'Order history and details'|trans({}, 'Shop.Theme.Customeraccount', locale)`
+dentro de los parámetros del `|trans()` exterior). Ese dominio interior TAMBIÉN
+necesita su copia en core, aunque sea un dominio normalmente theme-scoped que ya
+funciona bien en el storefront — el traductor de generación de emails no distingue,
+trata todo lo referenciado desde dentro de una plantilla de email igual. Para
+encontrar TODOS los dominios que hacen falta en core para un proyecto dado:
+
+```bash
+python3 ~/.claude/skills/ps-translate/scripts/scan.py --base <ruta_ps> --list-mail-domains
+# → Emails.Body,Shop.Theme.Customeraccount   (lista completa, separada por comas)
+```
+
+### Flujo completo de emails (en orden)
+
+```bash
+# 1. Dominios necesarios en core para ESTE proyecto (varía por mail theme/módulos instalados)
+DOMAINS=$(python3 ~/.claude/skills/ps-translate/scripts/scan.py --base <ruta_ps> --list-mail-domains)
+
+# 2. Escanea + traduce + escribe cada dominio de email — con --core-domains "$DOMAINS"
+#    (si un dominio como Shop.Theme.Customeraccount YA está traducido en el theme por otro
+#    motivo, basta con copiar ese XLF ya existente a translations/<locale>/ con el nombre
+#    sin puntos — no hace falta re-traducirlo desde cero)
+python3 ~/.claude/skills/ps-translate/scripts/scan.py --base <ruta_ps> --lang <locale> \
+  --include-emails --output /tmp/ps_emails_<locale>.json
+# … traducir (Paso 2) …
+python3 ~/.claude/skills/ps-translate/scripts/write_xlf.py --base <ruta_ps> --lang <locale> \
+  --translations <json_traducido> --core-domains "$DOMAINS"
+
+# 3. Limpiar caché — rm -rf var/cache/* NO es suficiente, hace falta el comando
+php bin/console cache:clear
+
+# 4. Generar las plantillas reales por idioma (esto NO pasa solo)
+php bin/console prestashop:mail:generate <mail-theme> <locale> --overwrite
+# <mail-theme> = valor de ps_configuration.PS_MAIL_THEME (normalmente "modern")
+```
+
+**Por qué el paso 4 es obligatorio y no opcional**: los layouts Twig son la FUENTE,
+no lo que `Mail::send()` usa en producción — ese método lee los ficheros estáticos
+generados en `mails/<locale>/`. Si ese idioma nunca se generó (típico cuando el
+idioma se activó por API/DB en vez del flujo normal de Admin → Idiomas → Añadir),
+esa carpeta ni existe, y ningún XLF por sí solo la crea.
+
+**Verificación final** — vuelve a correr el scan tras generar; debe dar 0:
+
+```bash
+python3 ~/.claude/skills/ps-translate/scripts/scan.py --base <ruta_ps> --lang <locale> \
+  --include-emails --output /dev/null   # total: 0 en stderr = todo cubierto
+```
+
+Y opcionalmente, barrido de texto plano sobre los HTML generados buscando frases
+en inglés que se sepa deberían estar traducidas (grep simple, sin `<tags>`), como
+capa extra de confianza antes de dar el email por completo.
+
+---
+
 ## Qué dominios ignorar (admin, no críticos)
 
 Por defecto el scanner omite `Admin.*`, `psgdpr`, `ps_themecusto`, `steasybuilder`,
@@ -143,10 +268,15 @@ Por defecto el scanner omite `Admin.*`, `psgdpr`, `ps_themecusto`, `steasybuilde
 
 ## Dónde se guardan las traducciones
 
-Siempre en el **child theme**:
+Por defecto, siempre en el **child theme**:
 `themes/<theme>/translations/<locale>/<DomainKey>.<locale>.xlf`
 
-Nunca se modifican el core (`/translations/`) ni el tema padre.
+Nunca se modifican el core (`/translations/`) ni el tema padre — **excepto** los
+dominios de email (`write_xlf.py --core-domains "..."`, ver sección de arriba),
+que van a `translations/<locale>/<DomainKeySinPuntos>.<locale>.xlf` en la raíz del
+core porque el traductor de generación de emails no lee el theme en absoluto. Es
+la única excepción deliberada a esta norma, y está acotada a esos dominios
+concretos — todo lo demás sigue yendo siempre al theme.
 
 ---
 
@@ -160,3 +290,13 @@ Nunca se modifican el core (`/translations/`) ni el tema padre.
   "Sort by"→"Trier par" no, pero "Ajouter au panier" sí sin acento) puede
   re-listarse; es inofensivo (se traduce a sí mismo). El diff contra los XLF es el
   filtro principal.
+- Dos bugs de comparación ya corregidos (no deberían reaparecer, pero documentados
+  por si algo similar vuelve a pasar): (1) un `|trans()` anidado dentro de los
+  parámetros de otro (típico en emails, ver arriba) hacía que una regex simple
+  capturase el dominio INTERIOR en vez del exterior — se resolvió balanceando
+  llaves manualmente (`find_twig_trans_calls`) en vez de una regex de un solo paso.
+  (2) el contenido de `<source>` en un XLF ya escrito está XML-escapado en disco,
+  pero los strings detectados en plantillas (`used`) no lo están — comparar ambos
+  tal cual hacía que CUALQUIER string con `<`, `>`, `"` o `&` (todo el HTML de los
+  emails) se reportara como "sigue faltando" incluso después de traducirlo
+  correctamente. Se corrigió desescapando en `load_translations()` antes de comparar.

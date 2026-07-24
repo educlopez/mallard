@@ -56,14 +56,29 @@ def xml_escape(s: str) -> str:
 
 
 def write_domain(base: str, theme: str, lang: str,
-                  domain_key: str, translations: dict) -> tuple[int, int]:
+                  domain_key: str, translations: dict, core: bool = False) -> tuple[int, int]:
     """
     Escribe traducciones al XLF del dominio.
+
+    `core=True` escribe en la raíz `translations/<lang>/` (con puntos preservados en
+    el nombre de fichero) en vez de `themes/<theme>/translations/<lang>/`. Necesario
+    para dominios como `Emails.Body`/`Emails.Subject` (email transaccional generado
+    por `prestashop:mail:generate`) y cualquier otro resuelto por el traductor Symfony
+    "core" — confirmado empíricamente que este traductor NO lee directorios de
+    traducción por-theme en absoluto (probado con y sin puntos en el nombre de
+    fichero, en ambos casos "missing" hasta ponerlo en la raíz `translations/`).
+    Esto es una EXCEPCIÓN deliberada a la norma general de "nunca tocar core, todo
+    en el child theme" — solo para los dominios que genuinamente lo requieren.
     Returns (added, skipped).
     """
-    xlf_dir = os.path.join(base, 'themes', theme, 'translations', lang)
+    if core:
+        xlf_dir = os.path.join(base, 'translations', lang)
+        filename_key = domain_key  # puntos preservados: Emails.Body.fr-FR.xlf
+    else:
+        xlf_dir = os.path.join(base, 'themes', theme, 'translations', lang)
+        filename_key = domain_key.replace('.', '')  # convención theme: EmailsBody.fr-FR.xlf
     os.makedirs(xlf_dir, exist_ok=True)
-    xlf_path = os.path.join(xlf_dir, f'{domain_key}.{lang}.xlf')
+    xlf_path = os.path.join(xlf_dir, f'{filename_key}.{lang}.xlf')
 
     if os.path.exists(xlf_path):
         content = open(xlf_path, encoding='utf-8').read()
@@ -106,6 +121,12 @@ def main():
                    help='Leer JSON desde stdin')
     p.add_argument('--dry-run', action='store_true',
                    help='Preview sin escribir')
+    p.add_argument('--core-domains', default='',
+                   help='Lista separada por comas de dominios (con puntos, ej. '
+                        '"Emails.Body,Emails.Subject") que deben escribirse en la '
+                        'raíz translations/<lang>/ en vez de themes/<theme>/translations/ '
+                        '— necesario para dominios resueltos por el traductor Symfony '
+                        '"core" (emails transaccionales). Ver docstring de write_domain().')
     args = p.parse_args()
 
     if args.stdin:
@@ -133,7 +154,10 @@ def main():
     # 2. Anidado del scan: {"domains": {"Domain.With.Dots": [...], ...}}
     #    En este caso las claves del dict de traducciones son los dominios con puntos
 
+    core_domains = {d.strip() for d in args.core_domains.split(',') if d.strip()}
+
     total_added = total_skipped = 0
+    wrote_core = False
 
     for domain_key, translations in data.items():
         if domain_key in ('locale', 'theme', 'parent', 'base', 'total', 'domains'):
@@ -141,26 +165,35 @@ def main():
         if not isinstance(translations, dict):
             continue
 
-        # Normalizar: quitar puntos si los tiene (Shop.Theme.X → ShopThemeX)
-        normalized_key = domain_key.replace('.', '')
+        is_core = domain_key in core_domains
+        # Normalizar: quitar puntos si los tiene (Shop.Theme.X → ShopThemeX) — salvo
+        # que este dominio vaya a core, donde el traductor Symfony espera el nombre
+        # de fichero con puntos preservados (ver write_domain).
+        normalized_key = domain_key if is_core else domain_key.replace('.', '')
 
         if args.dry_run:
-            print(f"  [DRY] {normalized_key}: {len(translations)} strings")
+            dest = 'CORE translations/' if is_core else f'themes/{theme}/translations/'
+            print(f"  [DRY] {normalized_key} → {dest}: {len(translations)} strings")
             continue
 
         added, skipped = write_domain(
-            base, theme, lang, normalized_key, translations
+            base, theme, lang, normalized_key, translations, core=is_core
         )
         total_added += added
         total_skipped += skipped
+        wrote_core = wrote_core or (is_core and added)
         if added:
-            print(f"  ✅ {normalized_key}: +{added} añadidos ({skipped} ya existían)")
+            dest_label = ' (CORE)' if is_core else ''
+            print(f"  ✅ {normalized_key}{dest_label}: +{added} añadidos ({skipped} ya existían)")
 
     if not args.dry_run:
         print(f"\n🎉 Total: {total_added} traducciones escritas, {total_skipped} ya existían")
         print(f"\nPróximos pasos:")
-        print(f"  rm -rf {base}/var/cache/prod/*")
-        print(f"  git add themes/{theme}/translations/")
+        print(f"  php bin/console cache:clear   # rm -rf var/cache/* NO es suficiente, hace falta el comando")
+        if wrote_core:
+            print(f"  # Dominios core escritos — si son de email, regenera las plantillas:")
+            print(f"  php bin/console prestashop:mail:generate <mail-theme> {lang} --overwrite")
+        print(f"  git add themes/{theme}/translations/" + (" translations/" if wrote_core else ""))
         print(f"  git commit -m 'feat(i18n): traducciones automáticas ps-translate'")
 
 
