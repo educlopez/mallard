@@ -2,138 +2,154 @@
 name: ps-translate
 description: >
   Automatiza la detección y traducción de strings sin traducir en una instalación
-  PrestaShop. Escanea todos los templates .tpl y archivos PHP buscando llamadas
-  {l s='...' d='...'} del sistema i18n de PS, compara contra los XLF existentes
-  del locale activo (es-CO por defecto) y traduce los strings faltantes usando
-  Claude de forma nativa — sin API key externa.
+  PrestaShop, a CUALQUIER idioma. Detecta el child theme y los locales instalados
+  (DB ps_lang con fallback a filesystem), escanea templates .tpl buscando llamadas
+  {l s='...' d='...'} del sistema i18n de PS, compara contra los XLF existentes del
+  locale objetivo y traduce los strings faltantes usando Claude de forma nativa —
+  sin API key externa. Soporta varios idiomas en una sola corrida.
   Usa esta skill cuando el usuario mencione: "traducciones PS", "strings en inglés",
-  "ps-translate", "traducir prestashop", "i18n pendiente", "hay textos en inglés
-  en la tienda", "¿qué strings faltan por traducir?" o cuando vea texto en inglés
-  en el storefront que debería estar en español.
-version: "1.0.0"
+  "ps-translate", "traducir prestashop", "traducir a francés/alemán/español", "i18n
+  pendiente", "hay textos sin traducir en la tienda", "¿qué strings faltan por
+  traducir?" o cuando vea texto sin traducir en el storefront.
+version: "2.0.0"
 metadata:
   author: Eduardo Calvo
 ---
 
-# ps-translate — Traducciones PrestaShop automatizadas
+# ps-translate — Traducciones PrestaShop automatizadas (multi-idioma)
 
-Detecta strings sin traducir y los traduce directamente usando Claude Code, sin necesitar API key externa.
+Detecta strings sin traducir y los traduce directamente usando Claude Code, sin
+API key externa. Agnóstico de idioma: detecta los idiomas instalados o los pregunta.
 
 ## Flujo de trabajo
 
-### Paso 1 — Escanear strings faltantes
+### Paso 0 — Detectar theme e idiomas (SIEMPRE primero)
 
-Corre el script de escaneado para obtener qué strings faltan:
+```bash
+python3 ~/.claude/skills/ps-translate/scripts/detect.py --base <ruta_ps>
+```
+
+Devuelve el child theme, su parent, y los locales instalados:
+
+```json
+{ "theme": "mystore", "parent": "classic",
+  "locales": ["es-ES", "fr-FR", "de-DE"], "source": "db" }
+```
+
+- `source: "db"` → leído de `ps_lang` (idiomas realmente activos). Requiere `pymysql`
+  y DB accesible; en Lando el host suele ser interno y caerá a filesystem — normal.
+- `source: "filesystem"` → deducido de los dirs `translations/<locale>/`.
+
+**Luego decide el/los idioma(s) objetivo:**
+- Si hay UN solo locale (aparte de `en-US`) → úsalo directo.
+- Si hay VARIOS → **pregunta al usuario** a cuál(es) traducir (acepta varios).
+- Si `locales` viene vacío o el usuario quiere otro → pídele el locale (formato
+  `es-ES`, `fr-FR`, `de-DE`, `it-IT`, `pt-PT`…). No asumas es-CO ni ninguno por defecto.
+
+### Paso 1 — Escanear strings faltantes (por cada locale objetivo)
 
 ```bash
 python3 ~/.claude/skills/ps-translate/scripts/scan.py \
-  --base <ruta_instalacion_ps> \
-  --theme <nombre_child_theme> \
-  --lang <locale>
+  --base <ruta_ps> --lang <locale> --output /tmp/ps_missing_<locale>.json
 ```
 
-**Argumentos:**
+`--theme` se auto-detecta; pásalo solo para forzar otro. Argumentos:
 
 | Flag | Default | Descripción |
 |------|---------|-------------|
 | `--base` | `.` (cwd) | Raíz de la instalación PS |
-| `--theme` | `milagros` | Nombre del child theme |
-| `--lang` | `es-CO` | Locale objetivo |
-| `--domain` | todos | Filtrar por dominio (ej. `ShopThemePanda`) |
+| `--lang` | auto si hay uno solo | Locale objetivo (ej. `fr-FR`) |
+| `--theme` | auto-detectado | Child theme |
+| `--theme-only` | false | Solo storefront (`Shop.*`), ignora módulos terceros — recomendado |
+| `--domain` | todos | Filtrar por dominio (ej. `ShopThemeCatalog`) |
 | `--output` | stdout | Ruta a fichero JSON de salida |
 | `--include-admin` | false | Incluir dominios de backoffice |
 
-El script devuelve un JSON con este formato:
+> **Consejo:** empieza con `--theme-only`. Sin él, el scan incluye TODOS los strings de
+> módulos terceros (mailchimp, paypal, feeds…) que suelen ser miles y muchos ya vienen
+> traducidos por el módulo. `--theme-only` deja solo lo que el cliente ve en la tienda.
 
-```json
-{
-  "locale": "es-CO",
-  "theme": "milagros",
-  "domains": {
-    "ShopThemePanda": ["Filter", "Sort by", "No products were found."],
-    "ShopThemeActions": ["Buy now", "Show all"]
-  },
-  "total": 44
-}
-```
+Salida: `{locale, theme, parent, total, domains: {"Shop.Theme.X": [strings...]}}`.
 
 ### Paso 2 — Traducir los strings (Claude lo hace aquí)
 
-Con el JSON del paso anterior, traduce cada dominio al locale objetivo.
+Con el JSON del scan, traduce cada dominio al **locale objetivo** (el que sea).
 
-**Instrucciones para Claude:**
-- Traduce al **español colombiano (es-CO)** — natural, de UI, sin vosotros
-- Mantén coherencia de terminología:
-  - cart → carrito · order → pedido · shipping → envío
-  - discount → descuento · checkout → pago/compra · product → producto
-- **Nunca traduzcas** placeholders: `%s`, `%d`, `{variable}`, `[1]...[/1]`, `%%param%%`
-- Strings cortos (botones, etiquetas) → máximo 3-4 palabras
-- Mensajes de error → directo y claro, sin "Por favor, asegúrese de que..."
-- Salida: JSON `{source: translation}` por dominio
+**Reglas universales (cualquier idioma):**
+- Traduce a la variante regional del locale (`es-ES` España, `es-CO` Colombia,
+  `pt-PT` vs `pt-BR`, etc.). Español de España = usa "vosotros"/formal según tono
+  del sitio; español LATAM = "ustedes", sin vosotros.
+- **Nunca traduzcas** placeholders: `%s`, `%d`, `{variable}`, `[1]...[/1]`, `%%param%%`.
+- Strings cortos (botones, etiquetas) → 3-4 palabras máx.
+- Mensajes de error → directo y claro.
+- Terminología e-commerce coherente. Glosario según idioma:
+  - **es**: cart→carrito, order→pedido, shipping→envío, checkout→pago, discount→descuento
+  - **fr**: cart→panier, order→commande, shipping→livraison, checkout→paiement, discount→remise
+  - **de**: cart→Warenkorb, order→Bestellung, shipping→Versand, checkout→Kasse, discount→Rabatt
+  - **it**: cart→carrello, order→ordine, shipping→spedizione, checkout→pagamento, discount→sconto
+  - **pt**: cart→carrinho, order→encomenda, shipping→envio, checkout→pagamento, discount→desconto
+  - Otro idioma → aplica el equivalente estándar de e-commerce.
+- Salida: JSON `{"Shop.Theme.X": {"source": "traducción", ...}}` por dominio.
 
-### Paso 3 — Escribir los XLF
-
-Una vez tienes las traducciones, escribe los nuevos `<trans-unit>` al child theme:
+### Paso 3 — Escribir los XLF (por cada locale)
 
 ```bash
 python3 ~/.claude/skills/ps-translate/scripts/write_xlf.py \
-  --base <ruta_ps> \
-  --theme <child_theme> \
-  --lang <locale> \
-  --translations <ruta_al_json_de_traducciones>
+  --base <ruta_ps> --lang <locale> --translations <json_traducciones>
 ```
 
-El script escribe en `themes/<theme>/translations/<lang>/<Domain>.<lang>.xlf`, sin duplicar entradas existentes.
+Escribe en `themes/<theme>/translations/<locale>/<Domain>.<locale>.xlf`, sin
+duplicar entradas existentes. `--theme` auto-detectado. `--dry-run` para preview.
 
 ### Paso 4 — Limpiar caché y verificar
 
 ```bash
-# Limpiar caché PS
 rm -rf <base>/var/cache/prod/*
-
-# Verificar en el storefront
-# Luego commitear
 git add themes/<theme>/translations/
-git commit -m "feat(i18n): auto-translate missing strings via ps-translate"
+git commit -m "feat(i18n): auto-translate missing strings (<locale>) via ps-translate"
 ```
 
 ---
 
-## Uso rápido (todo en uno)
+## Multi-idioma en una corrida
 
-Cuando el usuario pida traducir strings, ejecuta directamente:
+Para traducir a varios locales, repite pasos 1-3 por cada uno:
 
 ```bash
-# 1. Escanear (guarda JSON en /tmp/ps_missing.json)
-python3 ~/.claude/skills/ps-translate/scripts/scan.py \
-  --base . --output /tmp/ps_missing.json
-
-# 2. Revisar qué hay
-cat /tmp/ps_missing.json | python3 -c "import sys,json; d=json.load(sys.stdin); [print(f'[{k}] {len(v)} strings') for k,v in d['domains'].items()]"
+for LANG in es-ES fr-FR de-DE; do
+  python3 ~/.claude/skills/ps-translate/scripts/scan.py \
+    --base . --lang "$LANG" --theme-only --output "/tmp/ps_missing_$LANG.json"
+done
 ```
 
-Luego traduce el contenido del JSON y ejecuta `write_xlf.py` con las traducciones.
+Traduce cada `/tmp/ps_missing_<locale>.json` con el glosario del idioma
+correspondiente, y corre `write_xlf.py` una vez por locale.
 
 ---
 
 ## Qué dominios ignorar (admin, no críticos)
 
-Por defecto el scanner omite:
-- `Admin.*` — backoffice, no lo ve el cliente
-- `psgdpr`, `ps_themecusto`, `steasybuilder` — módulos admin/configuración
-- `ps_facebook`, `ps_accounts` — módulos de integración externa
-
-Pasa `--include-admin` si quieres incluirlos.
+Por defecto el scanner omite `Admin.*`, `psgdpr`, `ps_themecusto`, `steasybuilder`,
+`ps_facebook`, `ps_accounts`. Pasa `--include-admin` para incluirlos.
 
 ---
 
 ## Dónde se guardan las traducciones
 
-Siempre en el **child theme** del proyecto:
-```
-themes/<theme>/translations/<lang>/<DomainKey>.<lang>.xlf
-```
+Siempre en el **child theme**:
+`themes/<theme>/translations/<locale>/<DomainKey>.<locale>.xlf`
 
-Nunca se modifican:
-- `/translations/<lang>/` (core PS)
-- `themes/panda/translations/` (tema padre)
+Nunca se modifican el core (`/translations/`) ni el tema padre.
+
+---
+
+## Notas / limitaciones
+
+- Detección DB requiere `pymysql` (`pip install pymysql`). Sin él o sin DB
+  accesible, cae a filesystem — funciona igual, solo lista los locales con dir de
+  traducciones ya generado.
+- Heurística "ya traducido": salta strings con diacríticos del idioma destino
+  (á, ñ, ç, ü, ß…). Un string sin diacríticos ya escrito en destino (ej. francés
+  "Sort by"→"Trier par" no, pero "Ajouter au panier" sí sin acento) puede
+  re-listarse; es inofensivo (se traduce a sí mismo). El diff contra los XLF es el
+  filtro principal.

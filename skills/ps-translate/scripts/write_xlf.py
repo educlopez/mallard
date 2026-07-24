@@ -26,6 +26,12 @@ import os
 import re
 import sys
 
+try:
+    from detect import detect_theme  # type: ignore
+except ImportError:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from detect import detect_theme
+
 XLF_TEMPLATE = '''<?xml version="1.0" encoding="utf-8"?>
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
   <file source-language="en-US" target-language="{lang}" datatype="plaintext" original="file.ext">
@@ -92,8 +98,8 @@ def write_domain(base: str, theme: str, lang: str,
 def main():
     p = argparse.ArgumentParser(description='Escribe traducciones PS a XLF')
     p.add_argument('--base', default='.', help='Raíz instalación PS')
-    p.add_argument('--theme', default='milagros', help='Child theme')
-    p.add_argument('--lang', default='es-CO', help='Locale objetivo')
+    p.add_argument('--theme', default=None, help='Child theme (auto-detecta si se omite)')
+    p.add_argument('--lang', default=None, help='Locale objetivo, ej. es-ES (requerido)')
     p.add_argument('--translations', default=None,
                    help='Ruta al JSON de traducciones')
     p.add_argument('--stdin', action='store_true',
@@ -112,6 +118,16 @@ def main():
 
     base = os.path.abspath(args.base)
 
+    # ── Auto-detección de theme / validación de locale ────────────────────────
+    theme = args.theme or detect_theme(base)[0]
+    if not theme:
+        print("ERROR: no se detectó child theme. Pasa --theme <nombre>.", file=sys.stderr)
+        sys.exit(1)
+    lang = args.lang or data.get('locale') if isinstance(data, dict) else args.lang
+    if not lang:
+        print("ERROR: pasa --lang <locale> (ej. es-ES).", file=sys.stderr)
+        sys.exit(1)
+
     # El JSON puede venir en dos formatos:
     # 1. Plano: {"DomainKey": {"source": "target", ...}, ...}
     # 2. Anidado del scan: {"domains": {"Domain.With.Dots": [...], ...}}
@@ -120,7 +136,7 @@ def main():
     total_added = total_skipped = 0
 
     for domain_key, translations in data.items():
-        if domain_key in ('locale', 'theme', 'base', 'total', 'domains'):
+        if domain_key in ('locale', 'theme', 'parent', 'base', 'total', 'domains'):
             continue
         if not isinstance(translations, dict):
             continue
@@ -133,7 +149,7 @@ def main():
             continue
 
         added, skipped = write_domain(
-            base, args.theme, args.lang, normalized_key, translations
+            base, theme, lang, normalized_key, translations
         )
         total_added += added
         total_skipped += skipped
@@ -144,7 +160,7 @@ def main():
         print(f"\n🎉 Total: {total_added} traducciones escritas, {total_skipped} ya existían")
         print(f"\nPróximos pasos:")
         print(f"  rm -rf {base}/var/cache/prod/*")
-        print(f"  git add themes/{args.theme}/translations/")
+        print(f"  git add themes/{theme}/translations/")
         print(f"  git commit -m 'feat(i18n): traducciones automáticas ps-translate'")
 
 
