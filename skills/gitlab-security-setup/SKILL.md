@@ -8,7 +8,7 @@ description: >
   supply chain protection, or wants email reports of vulnerabilities. Do NOT use
   for GitHub-hosted projects, personal projects, or PrestaShop projects — use
   ps-security-audit skill instead for any PrestaShop project.
-version: "0.2.0"
+version: "0.2.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -349,13 +349,17 @@ dependency-scan:
 
     - |
       # REPORT_RECIPIENTS is a comma-separated CI/CD variable (e.g. "a@x.com,b@y.com").
-      # Build one --mail-rcpt flag per address.
+      # Build one --mail-rcpt flag per address. POSIX sh only — the Trivy Alpine image
+      # runs /bin/sh (busybox), so NO bash-isms: no `read -ra` arrays, no `<<<` here-strings
+      # (they fail with "syntax error: unexpected redirection"). Word-split on IFS=','
+      # instead (leave $REPORT_RECIPIENTS unquoted on purpose).
       RCPT_ARGS=""
-      IFS=',' read -ra ADDRS <<< "$REPORT_RECIPIENTS"
-      for addr in "${ADDRS[@]}"; do
+      OLD_IFS="$IFS"; IFS=','
+      for addr in $REPORT_RECIPIENTS; do
         addr="$(echo "$addr" | xargs)"   # trim whitespace
         [ -n "$addr" ] && RCPT_ARGS="$RCPT_ARGS --mail-rcpt $addr"
       done
+      IFS="$OLD_IFS"
       curl --url "smtps://smtp.gmail.com:465" \
         --ssl-reqd \
         --mail-from "$GMAIL_USER" \
