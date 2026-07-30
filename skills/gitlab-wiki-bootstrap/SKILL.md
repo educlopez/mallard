@@ -4,18 +4,20 @@ description: >
   Bootstrap or extend a team-facing GitLab Wiki for a project — explores the
   actual codebase (not generic boilerplate) to populate Home plus
   type-specific pages (PrestaShop: Modules/Theme/Local Development/Gotchas;
-  Laravel: Integrations/Jobs & Queues/Deployment/Testing/Gotchas), then adds
-  a maintenance section to the project's CLAUDE.md so future agent sessions
-  keep it updated. Works both for brand-new projects with no wiki AND for
-  established projects with months/years of history — for the latter, audits
-  what already exists (wiki pages, README, docs/, CLAUDE.md) first and
+  Laravel: Integrations/Jobs & Queues/Deployment/Testing/Gotchas). Wiki
+  upkeep afterwards is a PERSONAL habit (see Step 5) — never written into
+  the project's own CLAUDE.md/AGENTS.md, since that would force every
+  teammate's agent to depend on `glab` CLI just from touching the repo.
+  Works both for brand-new projects with no wiki AND for established
+  projects with months/years of history — for the latter, audits what
+  already exists (wiki pages, README, docs/, CLAUDE.md) first and
   extends/corrects rather than starting from a blank slate. Use when the user
   says "monta la wiki", "crea la wiki para X", "documenta este proyecto en
   GitLab", "actualiza/completa la wiki de X", or wants team documentation set
   up or brought up to date for any project regardless of its age. Distinct
   from a personal notes/second-brain tool — this is for anything teammates
   need, not the user alone.
-version: "0.2.0"
+version: "0.3.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -175,42 +177,46 @@ each page's content after upload if scripting more than 2-3 at once:
 glab api "projects/<id>/wikis/<slug>" | jq -r .content | head -5
 ```
 
-## Step 5 — add CLAUDE.md maintenance section
+## Step 5 — wiki upkeep is PERSONAL, not project config
 
-Append to the project's `CLAUDE.md` (create the file if it doesn't exist) —
-adapt the page list to what you actually created. If `CLAUDE.md` already has
-a "GitLab Wiki maintenance" section from a prior run of this skill, update it
-in place (page list may have grown) rather than duplicating the section:
+**Do NOT write a "keep the wiki updated" section into the project's
+CLAUDE.md/AGENTS.md.** That was this skill's approach in earlier versions
+(v0.2.0 and before) and it was a real mistake: that file is read by every
+agent any teammate runs against the repo, so an instruction to use
+`glab api` there forces `glab` CLI (GitLab CLI) on people who don't have it
+installed — they'd get install prompts just from touching the repo. Several
+Cinetic projects had this section retroactively removed for that reason
+(see `git log` on those repos' `CLAUDE.md` for the revert commits if you
+want the paper trail).
+
+Instead, wiki upkeep is a **personal habit** that lives in the *user's own*
+global Claude Code config (`~/.claude/CLAUDE.md`), scoped explicitly to
+Cinetic/work projects — never in the repo itself, never assumed for anyone
+else. If the user doesn't already have this in their global config, offer to
+add it (to `~/.claude/CLAUDE.md`, not the project):
 
 ```markdown
-## GitLab Wiki maintenance
-
-This project has a team-facing GitLab Wiki (<list your pages>) — separate
-from any personal notes tool. It documents things teammates need that
-aren't obvious from the code alone.
-
-**Keep it current.** Whenever you (as an agent) do any of the following,
-update the relevant wiki page before finishing the task — don't wait to be
-asked:
-- <2-4 bullets specific to this project's pages — e.g. "add/remove an
-  integration", "change the deployment process", "discover a gotcha not
-  already documented">
-- Notice existing wiki content is now wrong/stale
-
-Update via `glab api -X PUT "projects/<id>/wikis/<slug>" -f "content=..."
--f "format=markdown"` (read the current page first with `glab api
-"projects/<id>/wikis/<slug>"` and edit incrementally — don't blindly
-overwrite). Add a new page + link it from Home if the topic doesn't fit an
-existing page. Keep entries factual and concrete, not generic boilerplate —
-this wiki is only useful if it reflects the actual codebase.
+## GitLab Wiki maintenance (Cinetic projects ONLY)
+- Applies ONLY to Cinetic client/work projects hosted on GitLab (cineticd
+  namespace — a `gl-cinetic`-style SSH remote alias, if the user has one, is
+  just a local machine convenience, not something to rely on or assume
+  elsewhere). Do NOT apply to personal projects or anything not hosted on
+  GitLab.
+- This is a PERSONAL preference, not a project convention — do NOT write
+  "keep the wiki updated" instructions into any project's
+  CLAUDE.md/AGENTS.md, even for Cinetic projects. Teammates without `glab`
+  CLI installed would get forced install prompts just from working on the
+  repo.
+- When asked to update a Cinetic project's GitLab wiki, use `glab api`
+  directly (read current page, edit incrementally, don't overwrite blindly)
+  — keep the instruction here in personal config, never baked into the repo
+  itself.
 ```
 
-This is the actual maintenance mechanism — there's no reliable way to
-auto-detect "wiki-worthy" changes mechanically, so the update habit lives in
-CLAUDE.md and gets picked up by whichever agent (Claude Code or otherwise)
-works on the project next. A CI-based reminder isn't a good fit here: the
-value of these pages is curation/judgment about what matters, not a
-diff-triggered mechanical process.
+There's no reliable way to auto-detect "wiki-worthy" changes mechanically,
+so the update habit has to live somewhere a human re-triggers it — that's
+this personal config entry, picked up only in the user's own sessions, not
+a project-level mechanism every contributor inherits.
 
 ## Checklist
 
