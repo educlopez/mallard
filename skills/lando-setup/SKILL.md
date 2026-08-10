@@ -8,7 +8,7 @@ description: >
   "prepara en local", "levanta el lando de X", "configura X en local", "actualízame
   la DB", "refresca la DB de X", "bájame la DB de X", "sync DB", or "quiero la DB
   actualizada de X".
-version: "0.2.0"
+version: "0.3.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -24,6 +24,18 @@ metadata:
 **DB refresh only** (Lando already running, just need fresh DB):
 "actualízame la DB", "refresca la DB de X", "bájame la DB de X", "sync DB", "quiero la DB actualizada de X"
 → Skip to [DB Refresh Mode](#db-refresh-mode) below.
+
+## ⚠️ Invoke this skill WITHOUT arguments
+
+The nginx template in Step 9 is full of `$1`…`$8` capture references. When this skill is
+invoked with an `args` string, the harness expands those as positional parameters — the
+image rewrite rules arrive mangled (`$1` becomes the first word of your args, `$5` becomes
+a URL, etc.) and any vhost written from them will 404 every product image.
+
+Invoke as `/lando-setup` with **no args** and state the project, server and options in the
+conversation instead. If you already invoked it with args, do NOT copy the rewrite rules
+from the loaded skill text — read `SKILL.md` from disk, or copy an existing working
+`.lando/nginx-site.conf` from another PS9 project.
 
 ## Placeholders
 - `{workspace}` — the directory under `~/developer/` where your projects live (e.g. your company or team name). Set it once; every path below uses `~/developer/{workspace}/{project-name}/`.
@@ -57,6 +69,26 @@ unset SSHPASS
 ```
 Install if missing: `brew install sshpass`
 **Never put the password directly in the command string** — use `-e` (reads from `$SSHPASS` env var) instead of `-p`.
+
+**Jump host / double hop (some internal servers):** the target is only reachable through a
+bastion, AND the key that authenticates the second hop lives **on the bastion**, not on the
+Mac. `ProxyJump` does NOT work here — it forwards the connection, not the bastion's keys.
+Detect it: `ssh -J {bastion} {user}@{target} "echo OK"` fails with `Permission denied
+(publickey)` while `ssh {bastion} "ssh {user}@{target} 'echo OK'"` succeeds.
+
+Two ways forward — **ask the user which one, never assume**:
+- Append their public key to `{user}@{target}:~/.ssh/authorized_keys` (via the bastion), then
+  `ProxyJump` works and rsync/mysqldump run directly. Modifies the target server.
+- Keep everything nested — no server change. Works fine, just more verbose:
+```bash
+# remote command
+ssh {bastion} "ssh {user}@{target} 'command'"
+# DB dump
+ssh {bastion} "ssh {user}@{target} 'mysqldump --no-tablespaces --single-transaction {DB_NAME}'" > dump.sql
+# directory transfer — tar over pipe, no staging on the bastion's disk (rsync can't traverse two hops)
+ssh {bastion} "ssh {user}@{target} 'cd {REMOTE_ROOT} && tar czf - {dir}'" | tar xzf -
+```
+When nested, substitute this pattern for every `rsync`/`ssh` command in Steps 3–7 below.
 
 **Adding new host to ~/.ssh/config** (do this when user gives raw `user@IP`):
 ```
@@ -134,6 +166,23 @@ rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" \
   {SSH_TARGET}:{REMOTE_ROOT}/translations/ ~/developer/{workspace}/{project}/translations/
 ```
 
+### 4b-bis — .env, localization/, mails/ (required for PS9)
+Also missing from git and easy to overlook:
+- `.env` — without it `bin/console` dies with
+  `Symfony\Component\Dotenv\Exception\PathException: Unable to read the "/app/.env" environment file`,
+  so Step 14 (cache clear) can never run.
+- `localization/` — `LocalizationWarmer` warns `file_get_contents(/app/localization/default.xml): Failed to open stream`.
+- `mails/` — transactional email templates.
+
+```bash
+rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" \
+  {SSH_TARGET}:{REMOTE_ROOT}/.env ~/developer/{workspace}/{project}/.env
+rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" \
+  {SSH_TARGET}:{REMOTE_ROOT}/localization/ ~/developer/{workspace}/{project}/localization/
+rsync -avz --progress -e "ssh -i ~/.ssh/{ssh_key}" \
+  {SSH_TARGET}:{REMOTE_ROOT}/mails/ ~/developer/{workspace}/{project}/mails/
+```
+
 ### 4c — app/config/ files (required)
 If `~/developer/{workspace}/{project}/app/config/parameters.php` already exists locally, warn user:
 > "app/config/ exists locally. Sync from server will overwrite parameters.php. Continue? (y/n)"
@@ -169,26 +218,42 @@ Without these, `ps_mainmenu` crashes calling `scandir('/app/img/c/')` on boot.
 ## Step 5 — Update parameters.php with Lando credentials
 
 After syncing app/config/ from server, parameters.php points to the remote DB → instant 500.
-Update it with local Lando values:
+Update it with local Lando values.
+
+**Capture the remote credentials FIRST** — the sed below destroys them, and Step 6/7 need them
+to dump the server DB:
+```bash
+cp ~/developer/{workspace}/{project}/app/config/parameters.php /tmp/parameters.remote.php
+grep -E "database_(name|user|password|prefix)" /tmp/parameters.remote.php
+```
+
+**The DB name/user/password is the RECIPE NAME, not always `lamp`:** recipe `lamp` → `lamp`,
+recipe `lemp` → **`lemp`**. Getting this wrong gives `ERROR 1049 (42000): Unknown database 'lamp'`
+and a 500 that looks like a broken install. Set `RECIPE` to whatever you chose in Step 1:
 
 ```bash
+RECIPE=lemp   # or lamp
 sed -i '' \
   -e "s/'database_host' => '[^']*'/'database_host' => 'database'/" \
-  -e "s/'database_name' => '[^']*'/'database_name' => 'lamp'/" \
-  -e "s/'database_user' => '[^']*'/'database_user' => 'lamp'/" \
-  -e "s/'database_password' => '[^']*'/'database_password' => 'lamp'/" \
+  -e "s/'database_name' => '[^']*'/'database_name' => '${RECIPE}'/" \
+  -e "s/'database_user' => '[^']*'/'database_user' => '${RECIPE}'/" \
+  -e "s/'database_password' => '[^']*'/'database_password' => '${RECIPE}'/" \
   -e "s/'mailer_host' => '[^']*'/'mailer_host' => 'sendmailhog'/" \
   ~/developer/{workspace}/{project}/app/config/parameters.php
 ```
 
-Lando default DB credentials: host=`database`, name=`lamp`, user=`lamp`, password=`lamp`, mailer=`sendmailhog`.
-Verify the file was updated correctly before proceeding.
+Lando DB credentials: host=`database`, name/user/password = recipe name, mailer=`sendmailhog`.
+Verify the file was updated correctly before proceeding. Confirm against the running container:
+```bash
+cd ~/developer/{workspace}/{project} && lando ssh -s database -c "mysql -uroot -e 'SHOW DATABASES'"
+```
 
 ## Step 6 — Get remote DB credentials
 
-At this point `app/config/parameters.php` should be synced locally. Read it:
+Read the **pre-rewrite backup** saved in Step 5 — the live `app/config/parameters.php` now holds
+the Lando credentials, not the server's:
 ```bash
-grep -E "database_(name|user|password|prefix)" ~/developer/{workspace}/{project}/app/config/parameters.php
+grep -E "database_(name|user|password|prefix)" /tmp/parameters.remote.php
 ```
 
 Extract:
@@ -218,6 +283,23 @@ Verify dump:
 wc -c ~/developer/{workspace}/{project-name}/dump.sql
 ```
 If file is under 100KB, likely failed or empty — check for errors before continuing.
+
+### 7b — Match the local DB engine to the server's
+
+Check what the server actually runs BEFORE writing `.lando.yml`:
+```bash
+ssh -i ~/.ssh/{ssh_key} {SSH_TARGET} "mysql -e 'SELECT VERSION()'"
+```
+
+A MariaDB 11.4+ server emits collations MySQL 8 cannot parse, and the import dies at line ~26:
+```
+ERROR 1273 (HY000) at line 26: Unknown collation: 'utf8mb4_uca1400_ai_ci'
+```
+Fix: set the local engine to the same family/version — e.g. `mariadb:11.8` (Lando 3.26.4 ships
+MariaDB 10.11 and 11.0–11.8). Do NOT try to sed the collations out of the dump.
+
+Changing the engine after a `lando start` needs `lando destroy -y` first — the existing volume
+was initialised by the other engine.
 
 ## Step 8 — Pick available port
 
@@ -415,14 +497,14 @@ server {
 }
 ```
 
-Then create `.lando.yml`:
+Then create `.lando.yml` (`database:` / `type:` must match the server engine found in Step 7b):
 ```yaml
 name: {lando-name}
 recipe: lemp
 config:
   php: "8.3"
   webroot: ./
-  database: mysql
+  database: mariadb:11.8   # or mysql:8.0 — match the server (Step 7b)
   xdebug: false
 services:
   appserver:
@@ -431,7 +513,7 @@ services:
       php: .lando/php.ini
   database:
     portforward: {next-free-port}
-    type: mysql
+    type: mariadb:11.8   # keep in sync with config.database above
   mail:
     type: mailhog
     hogfrom:
@@ -479,24 +561,40 @@ If version doesn't match (e.g. shows 8.1 but expected 8.3), stop and fix `.lando
 cd ~/developer/{workspace}/{project-name} && lando db-import dump.sql
 ```
 
-After import, verify tables exist:
+After import, verify tables exist.
+
+**`lando mysql -e "..."` silently returns nothing** in recent Lando — it is a passthrough
+wrapper, not a real client invocation. Run queries inside the database service instead, and
+pass multi-statement SQL through a file in the project root (the container mounts it at `/app`;
+`source` is a client command and cannot be combined with other statements in a single `-e`):
+
 ```bash
-cd ~/developer/{workspace}/{project-name} && lando mysql -e "SELECT COUNT(*) FROM ${DB_PREFIX}configuration;" 2>/dev/null
+cd ~/developer/{workspace}/{project-name}
+lando ssh -s database -c "mysql -uroot ${RECIPE} -e 'SELECT COUNT(*) FROM ${DB_PREFIX}configuration'"
 ```
 If this returns 0 or errors, DO NOT delete the dump file — report failure to user and stop.
 
 ## Step 13 — Fix URLs in DB
 
-Use the actual `DB_PREFIX` read from parameters.php (Step 6), not hardcoded `ps_`:
+Use the actual `DB_PREFIX` read from the Step 5 backup, not hardcoded `ps_`.
+
+**Set SSL to 1, not 0**, when the vhost sends `fastcgi_param HTTPS on` (the nginx template in
+Step 9 does): PS then sees every request as secure while the DB says SSL is off, and redirects
+https→http forever. Symptom: `curl` returns `302` pointing at the same page, and following
+redirects fails with curl exit 47 (too many redirects). Lando serves a valid https cert, so
+SSL on is also the accurate setting.
 
 ```bash
-cd ~/developer/{workspace}/{project-name} && lando mysql -e "
+cd ~/developer/{workspace}/{project-name}
+cat > urls.sql <<EOF
 UPDATE ${DB_PREFIX}configuration SET value = '{lando-name}.lndo.site' WHERE name = 'PS_SHOP_DOMAIN';
 UPDATE ${DB_PREFIX}configuration SET value = '{lando-name}.lndo.site' WHERE name = 'PS_SHOP_DOMAIN_SSL';
 UPDATE ${DB_PREFIX}shop_url SET domain = '{lando-name}.lndo.site', domain_ssl = '{lando-name}.lndo.site';
-UPDATE ${DB_PREFIX}configuration SET value = 0 WHERE name = 'PS_SSL_ENABLED';
-UPDATE ${DB_PREFIX}configuration SET value = 0 WHERE name = 'PS_SSL_ENABLED_EVERYWHERE';
-"
+UPDATE ${DB_PREFIX}configuration SET value = 1 WHERE name = 'PS_SSL_ENABLED';
+UPDATE ${DB_PREFIX}configuration SET value = 1 WHERE name = 'PS_SSL_ENABLED_EVERYWHERE';
+EOF
+lando ssh -s database -c "mysql -uroot ${RECIPE} -e 'source /app/urls.sql'"
+rm urls.sql
 ```
 
 ## Step 14 — Clear cache
@@ -513,7 +611,46 @@ If yes:
 rm -rf ~/developer/{workspace}/{project-name}/var/cache/*
 ```
 
-## Step 15 — Done
+## Step 15 — Verify before declaring done
+
+```bash
+curl -sk -o /dev/null -w "front=%{http_code} -> %{redirect_url}\n" https://{lando-name}.lndo.site/
+curl -sk -o /dev/null -w "admin=%{http_code} -> %{redirect_url}\n" https://{lando-name}.lndo.site/{admin-dir}/
+```
+Expected: front `200`, admin `302` to `/login`. A `302` on the front pointing back at itself is
+the SSL loop from Step 13.
+
+## Step 15b — Backoffice user (only if the user has no account in this DB)
+
+Ask before creating one. Generate the hash with the project's own PHP, then insert:
+```bash
+cd ~/developer/{workspace}/{project-name}
+lando php -r 'echo password_hash("{password}", PASSWORD_BCRYPT, ["cost"=>10]), PHP_EOL;'
+```
+
+Copy `id_profile` (1 = SuperAdmin), `id_lang` and `bo_theme` from an existing row, and insert
+into both `{prefix}employee` and `{prefix}employee_shop`.
+
+**`stats_date_from` / `stats_date_to` must hold real dates.** Left NULL, the Dashboard dies with
+`PrestaShopException: Date must be a string` — `HelperCalendar::setDateFrom()` falls back to
+`strtotime('-31 days')`, which returns an int, and the very next line demands `is_string()`.
+`stats_compare_from` / `stats_compare_to` want `'0000-00-00'`, which needs `SET sql_mode='';`
+at the top of the SQL file.
+
+Verify the login actually works — do not just check the row exists:
+```bash
+TOKEN=$(curl -sk -c /tmp/c.txt "https://{lando-name}.lndo.site/{admin-dir}/login" \
+  | grep -o 'name="_token"[^>]*value="[^"]*"' | head -1 | sed 's/.*value="//;s/"//')
+curl -sk -b /tmp/c.txt -c /tmp/c.txt -o /dev/null -w "login=%{http_code} -> %{redirect_url}\n" \
+  -X POST "https://{lando-name}.lndo.site/{admin-dir}/login" \
+  --data-urlencode "_token=$TOKEN" --data-urlencode "email={email}" \
+  --data-urlencode "passwd={password}" --data-urlencode "submitLogin=1"
+```
+Then follow the returned URL and confirm the Dashboard renders `200`.
+
+Warn the user: this employee lives only in the local DB and disappears on the next DB refresh.
+
+## Step 16 — Done
 
 Clean dump only after successful import (verified in Step 12):
 ```bash
@@ -543,9 +680,16 @@ test -f ~/developer/{workspace}/{project}/app/config/parameters.php || echo "MIS
 ```
 If MISSING: stop and tell user to run full setup or sync app/config from server first.
 
-Read DB credentials and prefix:
+Read the **prefix** locally — but NOT the credentials. After a full setup the local
+`parameters.php` holds the Lando values (`lemp`/`lemp`/`lemp`), which are useless for dumping
+the server:
 ```bash
-grep -E "database_(name|user|password|prefix)" ~/developer/{workspace}/{project}/app/config/parameters.php
+grep -E "database_prefix" ~/developer/{workspace}/{project}/app/config/parameters.php
+```
+
+Read the remote credentials from the SERVER's own copy:
+```bash
+ssh -i ~/.ssh/{ssh_key} {SSH_TARGET} "grep -E \"database_(name|user|password)\" {REMOTE_ROOT}/app/config/parameters.php"
 ```
 
 ### R1 — Test SSH + Dump from server
@@ -569,23 +713,27 @@ Verify: `wc -c ~/developer/{workspace}/{project-name}/dump.sql` — must be > 10
 cd ~/developer/{workspace}/{project-name} && lando db-import dump.sql
 ```
 
-Verify tables after import:
+Verify tables after import (`lando mysql -e` returns nothing — query inside the service):
 ```bash
-cd ~/developer/{workspace}/{project-name} && lando mysql -e "SELECT COUNT(*) FROM ${DB_PREFIX}configuration;"
+cd ~/developer/{workspace}/{project-name}
+lando ssh -s database -c "mysql -uroot ${RECIPE} -e 'SELECT COUNT(*) FROM ${DB_PREFIX}configuration'"
 ```
 If fails, keep dump and report to user.
 
 ### R3 — Fix URLs
 
-Use actual `DB_PREFIX` from parameters.php:
+Same SQL and the same SSL-must-be-1 rule as Step 13 — see there for why:
 ```bash
-cd ~/developer/{workspace}/{project-name} && lando mysql -e "
+cd ~/developer/{workspace}/{project-name}
+cat > urls.sql <<EOF
 UPDATE ${DB_PREFIX}configuration SET value = '{lando-name}.lndo.site' WHERE name = 'PS_SHOP_DOMAIN';
 UPDATE ${DB_PREFIX}configuration SET value = '{lando-name}.lndo.site' WHERE name = 'PS_SHOP_DOMAIN_SSL';
 UPDATE ${DB_PREFIX}shop_url SET domain = '{lando-name}.lndo.site', domain_ssl = '{lando-name}.lndo.site';
-UPDATE ${DB_PREFIX}configuration SET value = 0 WHERE name = 'PS_SSL_ENABLED';
-UPDATE ${DB_PREFIX}configuration SET value = 0 WHERE name = 'PS_SSL_ENABLED_EVERYWHERE';
-"
+UPDATE ${DB_PREFIX}configuration SET value = 1 WHERE name = 'PS_SSL_ENABLED';
+UPDATE ${DB_PREFIX}configuration SET value = 1 WHERE name = 'PS_SSL_ENABLED_EVERYWHERE';
+EOF
+lando ssh -s database -c "mysql -uroot ${RECIPE} -e 'source /app/urls.sql'"
+rm urls.sql
 ```
 
 ### R4 — Clear cache
@@ -597,11 +745,19 @@ cd ~/developer/{workspace}/{project-name} && lando php bin/console cache:clear
 ### R5 — Done
 Delete dump (only if import verified): `rm ~/developer/{workspace}/{project-name}/dump.sql`. Report URL.
 
+**Warn the user what the refresh just wiped:** any local-only backoffice employee (Step 15b) and
+any builder/DB config that is not git-tracked (Elementor/stsitebuilder kit settings, per-widget
+CSS). Offer to recreate the employee.
+
 ---
 
 ## Notes
 
 - ALWAYS confirm prod vs pre with user before SSHing anywhere
+- Enabling debug mode from the backoffice rewrites `config/defines.inc.php` (`_PS_MODE_DEV_` → `true`).
+  That file IS git-tracked — flag it to the user so it never reaches a commit.
+- The server sync leaves tracked files modified (module CSS caches, etc.) and new untracked dirs.
+  List them at the end; never commit them without being asked.
 - Never run destructive SQL (DROP, TRUNCATE) without explicit user confirmation
 - Large DBs (>500MB) can take 5+ min to import — normal
 - If shop shows wrong theme/images: check module status or trigger `lando-img-placeholder` skill
