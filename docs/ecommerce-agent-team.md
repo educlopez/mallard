@@ -208,7 +208,7 @@ El molde “skill/agente experto” ya existe. El combo **UX de tienda + perf de
 
 Nadie junta: experto UX que **no** maqueta + experto perf que **exige** Lighthouse + classifier que ya habla con `layout-builder` / `panda-expert` / `prestashop-expert` + KB que crece con clientes PS.
 
-Cotillear en serio esas dos: abajo, [qué extraemos](#qué-extraemos-de-las-dos).
+Cotillear en serio esas dos: abajo, [qué extraemos](#qué-extraemos-de-las-dos). Las estrellas de verdad viven en **categorías adyacentes**, no en este combo: [reinvestigación high-star](#reinvestigación-high-star).
 
 ## Qué extraemos de las dos
 
@@ -269,6 +269,77 @@ Leídas enteras (SKILL + references). No se vendoriza el repo; se copia el *meca
 | Critical/High/Medium/Low | formato de salida de ambos expertos |
 | Script Lighthouse | `how-to-measure.md` ahora; script luego |
 | UX prescribe, otro implementa | ya era la regla; Hydrogen tentaba a romperla con “show code” |
+| Tipo de página primero (Corey) | ya lo cubre el router de superficies |
+| Quick Wins / High-Impact / Test Ideas (Corey) | capa extra sobre Critical/High/Medium/Low: fácil vs caro vs hipótesis |
+| Heurísticas + dark patterns (Wondelai) | lentes en checkout/móvil; no un skill Nielsen aparte |
+| Métricas antes de grep (Vercel Optimize) | el experto perf no barre el child hasta tener Lighthouse/JSON |
+
+## Reinvestigación high-star
+
+Agosto 2026. No hay un repo de muchas estrellas que sea “experto UX de tienda + experto perf de storefront + CWD PrestaShop”. Las estrellas están al lado.
+
+### Dónde están las estrellas
+
+| Stars | Repo | Qué es de verdad | Encaje Mallard |
+|------:|------|------------------|----------------|
+| 170k | [anthropics/skills](https://github.com/anthropics/skills) | Formato oficial. `frontend-design` = identidad visual (no CRO de checkout). `webapp-testing` = tests | El molde SKILL.md. No copiar `frontend-design`: chocaría con el oficio UX |
+| 73k | [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) | Índice | Ruido |
+| 44.5k | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) | **El CRO con más estrellas.** `skills/cro/` es landing/SaaS: headline, CTA, pricing, forms. “Purchase” aparece; PDP/cart/checkout PS no | Forma de salida + “identifica el tipo de página”. No las 11 skills hermanas (copywriting, popups, ab-testing) |
+| 31k | [GoogleChrome/lighthouse](https://github.com/GoogleChrome/lighthouse) | La herramienta de medición | El experto perf la **invoca** (URL Lando). No es un agente |
+| 30k | [VoltAgent/awesome-agent-skills](https://github.com/VoltAgent/awesome-agent-skills) | Índice | Ruido |
+| 30k | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `web-design-guidelines` (fetch reglas, `file:line`). `vercel-optimize` = métricas primero, luego código. `react-best-practices` = React | Doctrina “no grep hasta tener señales”. Demasiado Vercel/Next para el child PS |
+| 95k | [microsoft/playwright](https://github.com/microsoft/playwright) | Browser automation | Auditoría live como `webshop-ux-expert`: opcional, no Fase 0 |
+| 8.6k | [GoogleChrome/web-vitals](https://github.com/GoogleChrome/web-vitals) | Lib JS de field metrics | Campo, no lab. Lighthouse local sigue siendo Fase 0 |
+| 7.0k | [GoogleChrome/lighthouse-ci](https://github.com/GoogleChrome/lighthouse-ci) | Gate CI | Más tarde, si hay pipeline |
+| 2.6k | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | Pack de skills CWV/Lighthouse | Sigue siendo el **mejor pack high-star de perf**. Ya extraído arriba |
+| 1.9k | [wondelai/skills](https://github.com/wondelai/skills) | 50 skills de libros. `ux-heuristics` (Krug + Nielsen, severidad 0–4, trunk test, dark patterns, 44px). `cro-methodology` (CRE: investigar antes de tips, objeciones O/CO, ICE) | Lentes y ética. No 50 frameworks de libro ni un score 10/10 |
+| 699 | [nexscope-ai/eCommerce-Skills](https://github.com/nexscope-ai/eCommerce-Skills) | Dump Amazon/seller | Ya descartado |
+| 208 | [medusajs/medusa-agent-skills](https://github.com/medusajs/medusa-agent-skills) | Convenciones Medusa | Plataforma ajena |
+| 43 | [kgelster/awesome-ecom-skills](https://github.com/kgelster/awesome-ecom-skills) | Juicio de **catálogo** Shopify (metafields, alt, redirects). Mutar tienda live | Línea ops, no criterio de front. Preview-before-mutate es de esa línea, no de UX/perf |
+
+Búsqueda `topic:agent-skills ecommerce`: el techo es nexscope (699). Nadie con miles de estrellas hace el oficio de ficha/checkout/LCP sobre un theme.
+
+### Qué sirve (sin vendorizar)
+
+**Corey `cro` (44.5k del parent)**
+
+1. **Tipo de página primero.** Homepage vs pricing vs form. Nosotros: superficie de compra (PDP, cart, checkout…). El router Hydrogen ya lo cubre; Corey lo confirma como hábito del CRO con más stars.
+2. **Salida en tres cubos:** Quick Wins / High-Impact / Test Ideas. Encaja con Critical/High/Medium/Low: Quick Win = hallazgo grave y barato; Test Idea = hipótesis, no prescripción. No inventar lifts.
+3. **No su embudo SaaS** (landing → signup → trial → paid). Una tienda PS no es una pricing page.
+4. **No instalar el pack marketing.** Cross-links a signup/popups/copywriting/ab-testing hincharían el classifier.
+
+**Wondelai `ux-heuristics` + `cro-methodology` (1.9k)**
+
+1. **No adivinar: investigar.** CRE lo dice igual que nosotros “nada de % inventados”. El experto UX cita el tpl y una fuente; si no hay dato, marca opinión.
+2. **Objeciones en checkout** (confianza, precio, esfuerzo). Útil junto a Baymard; no un skill de copy.
+3. **Dark patterns** (roach motel, hover-only, hijack del back). High stakes en pago/guest.
+4. **44px tap targets** y trunk test (“¿dónde estoy?”) en `mobile.md` / nav. Nielsen 10 como *lente*, no como el experto entero.
+5. **Severidad 0–4** (cosmetic → catastrophe) mapea a Critical/High/Medium/Low. Un solo scale; no dual.
+6. **No** el score 10/10 ni el plugin de 50 libros (`hooked-ux`, `lean-ux`, `refactoring-ui`…). Eso es otra productización.
+
+**Vercel `vercel-optimize` + `web-design-guidelines` (30k)**
+
+1. **Métricas antes de grep.** “No inspecciones fuentes hasta que exista `signals.json`.” En Mallard: no barrer el child hasta Lighthouse (o el JSON) de la URL Lando. Confirma Addy.
+2. **Hallazgos `file:line`.** El experto cita `templates/checkout/...:N`, no “el checkout está mal”.
+3. **No** Fluid compute, Observability Plus, ISR, ni su pipeline de sub-agentes. Un child Smarty no es Next en Vercel.
+
+**Anthropic `frontend-design` (170k del parent)**
+
+Identidad visual distintiva (palette, type, “un riesgo estético”). **No** es el experto UX de conversión. Si alguien pide “que se vea menos plantilla”, eso no es `/ux`. No usar un nombre parecido.
+
+**Lighthouse / Playwright / web-vitals**
+
+Herramientas. El experto perf las usa; Mallard no las reimplementa. Playwright live-audit puede llegar después; Fase 0 es criterio + cómo medir.
+
+### Qué no hacer con esto
+
+- Vendorizar `marketingskills` ni `wondelai/skills` enteros.
+- Mezclar CRO de landing SaaS con superficies de tienda.
+- Un segundo experto “heurísticas” aparte del UX.
+- Copiar `vercel-optimize` (auth CLI, Observability Plus, frameworks que bloquean PS).
+- Tratar índices awesome-\* como producto.
+
+High stars ≠ el producto. El mapa de superficies sigue siendo de Hydrogen (2★). El pack de medición, de Addy (2.6k). De los grandes: forma de salida (Corey), ética/heurísticas (Wondelai), métricas-antes-de-código (Vercel).
 
 ## Fuentes de oficio (para las KBs, no como runtime)
 
@@ -277,3 +348,6 @@ Leídas enteras (SKILL + references). No se vendoriza el repo; se copia el *meca
 - [web.dev / CWV](https://web.dev/explore/learn-core-web-vitals) — medición.
 - KBs ya en Mallard: `prestashop-kb`, `panda-kb`, `elementflow-kb` para el *cómo* en PS.
 - Estructura a mirar (no a vendorizar): [hydrogen-ecommerce-ux](https://github.com/hmtkyn/hydrogen-ecommerce-ux), [web-quality-skills](https://github.com/addyosmani/web-quality-skills).
+- Forma de salida CRO (no el embudo SaaS): [marketingskills/skills/cro](https://github.com/coreyhaines31/marketingskills).
+- Heurísticas / objeciones (lentes, no el roster): [wondelai/skills](https://github.com/wondelai/skills) (`ux-heuristics`, `cro-methodology`).
+- Métricas antes de grep: doctrina de [vercel-optimize](https://github.com/vercel-labs/agent-skills/tree/main/skills/vercel-optimize), aplicada a Lighthouse local.
