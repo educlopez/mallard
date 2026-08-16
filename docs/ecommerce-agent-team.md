@@ -98,30 +98,32 @@ Cada experto es CWD-first, como los otros: primero el proyecto, luego la KB.
 El valor no es el YAML del agente. Es la KB que vas llenando con oficio de clientes, igual que `panda-kb`.
 
 ```
-skills/ecommerce-ux-kb/references/
-  checkout.md          # pasos, guest, campos, trust, errores
-  product-page.md      # galería, variant, CTA, envío, reviews
-  listing.md           # PLP, facets, empty, sort
-  cart.md
-  mobile.md
-  merchandising.md     # home, above-the-fold, campañas
-  _index.md
+skills/ecommerce-ux-kb/          # SKILL.md = router de superficies, no dump
+  references/
+    homepage-and-navigation.md   # home, nav, PLP, product card
+    product-page.md
+    cart-and-checkout.md         # en PS el checkout SÍ es nuestro (Hydrogen lo delega)
+    search-and-filters.md
+    mobile.md                    # tap, sticky CTA, drawers — sin mezclar LCP
+    _index.md
 
-skills/ecommerce-perf-kb/references/
-  cwv.md               # LCP INP CLS en storefront
-  images.md
-  js-budget.md
-  third-parties.md
-  checkout-weight.md
-  how-to-measure.md    # Lighthouse local, qué no mentir
-  _index.md
+skills/ecommerce-perf-kb/         # SKILL.md = presupuesto + cómo priorizar
+  references/
+    cwv.md                       # LCP / INP / CLS (umbrales Google)
+    images.md
+    js-and-third-parties.md      # sliders st*, reviews, pixels
+    how-to-measure.md            # Lighthouse local; JSON fuera del contexto
+    _index.md
 ```
 
 Reglas de la KB:
 
-- Principio primero (“no pidas teléfono si no envías por SMS”), plataforma después (“en PS el guest vive en…, en ElementFlow el checkout es child theme”).
-- Nada de lifts inventados. Si no hay fuente (Baymard, web.dev, un caso vuestro), se marca opinión.
-- Un hallazgo repetido en dos clientes → se documenta. Así se “amplía a otras plataformas” de verdad: el principio es el mismo; la nota PS/Shopify se añade.
+- SKILL.md enruta (“esto es PDP → lee product-page.md”). No vuelques toda la KB.
+- Cada guideline: título imperativo + **Source** + **Why** + **En este stack** (Panda / ElementFlow / child checkout). Microformato de Hydrogen, sin su código Shopify.
+- Principio primero, plataforma después.
+- Nada de lifts inventados. Hydrogen lo dice y luego cita “+35% conversión”: no copiamos números. Si no hay fuente pública o caso vuestro, se marca opinión.
+- Checkout/pago/a11y = “high stakes”: se dice claro, sin % inventado.
+- Un hallazgo repetido en dos clientes → se documenta.
 
 ## Cómo se usa (comandos)
 
@@ -147,7 +149,7 @@ No hace falta `mallard commerce`. No hay subcomando nuevo. `mallard update` enla
 ### Fase 0 — Los dos expertos vacíos pero útiles
 
 - `claude/agents/ecommerce-ux-expert.md` y `ecommerce-perf-expert.md` (mismo frontmatter que `layout-builder`).
-- KBs mínimas: checkout + PDP + mobile (UX); CWV + images + how-to-measure (perf). Oficio vuestro, no un dump de blogs.
+- KBs mínimas: las 5 superficies UX de arriba + `cwv.md` + `how-to-measure.md`. Oficio vuestro en **En este stack**, no un dump de blogs ni de Hydrogen.
 - `/ux`, `/perf`.
 - `task-classifier`: tipos `ux` y `perf` + señales (“conversión”, “checkout”, “LCP”, “lento”).
 - Cero Go nuevo. Cero adapter.
@@ -206,7 +208,67 @@ El molde “skill/agente experto” ya existe. El combo **UX de tienda + perf de
 
 Nadie junta: experto UX que **no** maqueta + experto perf que **exige** Lighthouse + classifier que ya habla con `layout-builder` / `panda-expert` / `prestashop-expert` + KB que crece con clientes PS.
 
-Cotillear en serio: la estructura de carpetas de Hydrogen UX y el split de skills de Addy. El resto es ruido o otro oficio (seller).
+Cotillear en serio esas dos: abajo, [qué extraemos](#qué-extraemos-de-las-dos).
+
+## Qué extraemos de las dos
+
+Leídas enteras (SKILL + references). No se vendoriza el repo; se copia el *mecanismo*.
+
+### Hydrogen UX — qué sirve
+
+1. **KB por superficie de compra**, no por tecnología. Home+nav+PLP juntos; PDP; cart+checkout; search+filters; mobile. Search no es un extra: en Baymard público es first-class. Lo habíamos dejado flojo.
+2. **SKILL.md es un router.** Identifica la superficie por el path (`templates/checkout`, `product.tpl`, builder) y lee **un** reference. “Do not dump every guideline at once.”
+3. **Microformato de guideline** (título que es una regla, no un tema):
+
+   ```
+   ### Offer guest checkout; never require account creation
+   **Source:** Baymard (top-3 abandonment)
+   **Why it matters:** una frase
+   **En este stack:** Panda / ElementFlow / `templates/checkout` …
+   ```
+
+   Su campo `Hydrogen implementation` lo sustituimos por notas al `panda-kb` / `elementflow-kb`. El experto UX no reescribe cómo funciona Easy Builder.
+4. **Citar el porqué.** “Baymard: guest checkout” > “sé más usable”.
+5. **No inventar porcentajes.** Lo dicen ellos; varios números del propio repo huelen a blog. Nosotros: umbrales Google (CWV) sí; lifts Baymard premium no.
+6. **High stakes.** Checkout, pago, a11y: el experto lo marca; no lo diluye en un checklist de home.
+7. **PS invierte su nota de checkout.** Hydrogen *no* posee el pago (`cart.checkoutUrl`). PrestaShop/Panda/ElementFlow **sí**. Por eso el experto UX aquí vale más que en Hydrogen: el child theme *es* el checkout.
+
+### Hydrogen UX — qué no
+
+- Código `CartForm`, `useOptimisticCart`, Predictive Search API.
+- Mezclar LCP/a11y dentro del archivo de mobile (rompe el split de expertos).
+- Copiar guidelines verbatim (Baymard premium + su LICENSE). Principios públicos + oficio vuestro.
+- “Show code, don't just describe” para el experto UX. Aquí quien escribe CSS es `layout-builder`. El experto enseña *qué* y *dónde*; el worker el *cómo*.
+
+### Addy web-quality-skills — qué sirve
+
+1. **Un experto, varias lentes.** Ellos instalan 6 skills (audit / performance / cwv / a11y / seo / best-practices). Nosotros no. `ecommerce-perf-expert` carga `cwv.md` o `images.md` según el trigger, igual que el UX carga una superficie. `web-quality-audit` ≈ nuestro classifier cuando el ticket es “la web va mal” sin más.
+2. **CWV no es otra persona.** Es un reference (`LCP.md` / nuestro `cwv.md`) con tabla Good / Needs work / Poor (umbrales Google, 75º percentil).
+3. **Presupuesto en tabla**, luego retocado a storefront (pixels, sliders `st*`, reviews). Forma de Addy; números nuestros cuando midamos.
+4. **Severidad: Critical / High / Medium / Low.** Prioridad: fallo CWV y barrera a11y antes que estilo. El output del experto perf es una lista rankeada, no un ensayo.
+5. **SKILL.md < 500 líneas; references cargables solos.** Progressive disclosure. Hydrogen peca de files de 200+ líneas; Addy pide ~200. Nosotros: un tema por file, TOC arriba.
+6. **Medir fuera del contexto.** `scripts/analyze.sh`: logs en stderr, JSON en stdout. El experto perf no “cree” el LCP: corre Lighthouse en la URL Lando (o pide el JSON). Fase 0 puede ser “cómo medir”; el script puede esperar.
+7. **Bad / Good en perf.** Un `<img>` sin width/height vs con `width` `height` `fetchpriority`. Más útil que prosa. En UX el par es hallazgo en *este* tpl vs prescripción, no un snippet React.
+8. **Agnóstico primero.** Vanilla/HTML, luego nota de framework. Igual que nosotros: principio → Panda/EF.
+
+### Addy — qué no
+
+- Early Hints, Speculation Rules, `getServerSideProps` como consejo por defecto en un child PS.
+- Skill `best-practices` (CSP, HSTS) como experto de ecommerce. Eso no es conversión.
+- Grep de HTML estático como auditoría de una tienda Smarty/builder (su `analyze.sh` no entiende `.tpl`).
+- Instalar las 6 skills en paralelo a Mallard: duplicarían al classifier.
+
+### Encaje en Fase 0
+
+| De ellos | En Mallard |
+|----------|------------|
+| Router SKILL.md | `ecommerce-ux-kb/SKILL.md` y el agent apuntan a una superficie |
+| 5 files de superficie | lista de KBs de arriba; search entra ya |
+| Microformato Source/Why/Stack | plantilla de cada guideline |
+| CWV table + budgets | `cwv.md` + presupuesto en el SKILL de perf |
+| Critical/High/Medium/Low | formato de salida de ambos expertos |
+| Script Lighthouse | `how-to-measure.md` ahora; script luego |
+| UX prescribe, otro implementa | ya era la regla; Hydrogen tentaba a romperla con “show code” |
 
 ## Fuentes de oficio (para las KBs, no como runtime)
 
