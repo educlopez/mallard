@@ -5,7 +5,7 @@ Producto **nuestro**: un kernel de operación comercial (orquestación, ventas, 
 ## Decisión (esta iteración)
 
 - **No** dependemos del MCP Server de PrestaShop, MCP Tools Plus, Shopify MCP/UCP, Busony, VTEX, Agentforce, CrewAI Cloud, n8n ni ningún bus de terceros.
-- **No** es un skill más de Mallard pegado a una tienda PS. Mallard sigue siendo el toolkit de *desarrollo* PrestaShop. Esto es un **producto hermano**: ops comercial, platform-agnostic.
+- **Cabe en Mallard.** Mallard ya no es “solo PS”: es el OS de trabajo (PS + GitLab + Intervals + skills genéricos). El crew comercial entra como un **namespace** (`commerce-*`, `internal/commerce`), no como un repo hermano. Se extrae el día que duela (segundo público, binario hinchado, daemon), no el día uno.
 - Los agentes **nunca** llaman a la API nativa de una plataforma. Solo ven el contrato canónico + políticas + cola de aprobación.
 - Un conector de tienda **sí** hace falta (webservice, Admin API, REST propia). Eso no es “plataforma extra”: es el I/O de la tienda. El conector es código nuestro, fino, sustituible.
 - Si algún día exponemos MCP, será **una fachada opcional de *nuestras* tools**, no una dependencia. El runtime habla CLI/JSON (y luego HTTP) que controlamos.
@@ -82,10 +82,10 @@ Un adaptador incompleto es válido. El orquestador no llama lo que no existe.
 
 ## Runtime (nuestro, local-first)
 
-Producto hermano de Mallard: un binario (Go, mismo ADN: un CLI, cero daemon SaaS).
+Vive en Mallard. El linker (`update`/`doctor`) no cambia. El kernel es `internal/commerce`; los subcomandos llegan cuando hagan falta, no el día uno.
 
 ```
-commerce                  # CLI
+mallard commerce          # más tarde, no bloquea Fase 0
   store add|ls|ping
   pull                    # snapshot normalizado vía adapter
   briefing
@@ -197,27 +197,38 @@ No scrapeamos back-offices. No SQL directo a la BD de la tienda (rompe upgrades 
 
 ## Relación con Mallard
 
-| | Mallard | Este producto |
-|--|---------|----------------|
-| Job | Desarrollar temas/módulos PS | Operar y optimizar **cualquier** tienda |
-| Usuario | Dev | Ops / growth / nosotros en clientes |
-| I/O | repo git, Lando | APIs de tienda vía adapters |
-| Agentes | prestashop-expert, panda-expert… | sales-analyst, merchandiser… |
+Mallard **ya es** el sitio: toolkit personal/de equipo que crece según el trabajo. Hoy conviven `ps-*`, `panda-*`, `gitlab-*`, Intervals (`task-context`) y genéricos (`paginated-report-pdf`). El precedente de extracción es `prestashop-experts` (plugin freelance); se partió por **público**, no por idea nueva.
 
-Puente futuro (opcional): el merchandiser marca “sin foto” → abre tarea Intervals → Mallard `ps-image-regen`. Eso es A2A *nuestro*, no un protocolo externo.
+| Capa | Dónde | Qué es |
+|------|-------|--------|
+| Distribución | `mallard update/doctor` | No se toca |
+| Contenido agent | `skills/commerce-kb`, `claude/agents/commerce-*`, `/briefing` | Playbooks y roles |
+| Kernel | `internal/commerce` + más tarde `mallard commerce …` | Tipos, adapters, políticas, audit |
 
-**No** meter el kernel dentro de `skills/` de Mallard. Contamina el CLI de desarrollo y acopla el modelo a PrestaShop. Repo hermano (o monorepo con `cmd/commerce` claramente separado). Recomendación: **repo hermano**, mismo estilo de release (Go, un binario).
+Reglas de convivencia:
+
+- Prefijo `commerce-*`, nunca `ps-*`. Así un adapter Shopify no miente.
+- `internal/commerce` no lo importan `update`/`doctor`/`install`. El linker de skills no se entera del webservice.
+- Los agentes PS (`prestashop-expert`, `layout-builder`) no ganan tools de pedidos. El puente es al revés y explícito: merchandiser “sin foto” → Intervals → `ps-image-regen`.
+- Adapter `prestashop` habla webservice **nuestro**, no el módulo MCP. El oficio PS se reutiliza; el bus no.
+
+**Cuándo sí partir a otro repo** (más tarde, no ahora):
+
+1. Quieres dar Mallard a freelance **sin** el runtime de tiendas (el mismo corte que `prestashop-experts`).
+2. El binario se hincha (SDKs de Shopify + PS + snapshots) y `mallard update` tarda o asusta.
+3. Commerce necesita un daemon/HTTP propio y un ritmo de release distinto.
+
+Hasta entonces, otro repo es impuesto de distribución, no de diseño.
 
 ## Fases
 
-### Fase 0 — Kernel vacío + fake
+### Fase 0 — Kernel vacío + fake (dentro de Mallard)
 
-- Tipos canónicos + interface `Adapter`.
-- CLI: `store add`, `ping`, `pull`.
-- Adapter `fake` con un catálogo/pedidos de fixture.
+- `internal/commerce`: tipos canónicos + interface `Adapter`.
+- Adapter `fake` con un catálogo/pedidos de fixture + tests de conformidad.
 - Policy engine: `readOnly`, techos.
-- Audit log.
-- Cero LLM. Cero red de tienda real.
+- `skills/commerce-kb` + agentes en `claude/agents/commerce-*.md` (playbooks; aún pueden trabajar sobre fixtures).
+- Cero LLM obligatorio. Cero red de tienda real. Cero `mallard commerce` hasta que el kernel tenga algo que invocar.
 
 ### Fase 1 — Playbooks read-only sobre el fake (y un adapter real)
 
@@ -258,15 +269,14 @@ Puente futuro (opcional): el merchandiser marca “sin foto” → abre tarea In
 - ¿MCP Tools Plus o MCP oficial? **Ninguno.**
 - ¿CrewAI / LangGraph? **No.**
 - ¿Agnóstico o solo PS? **Agnóstico, adapters nuestros.**
-- ¿Mallard feature o producto? **Producto hermano.**
+- ¿Dentro de Mallard o repo hermano? **Dentro.** Namespace `commerce-*` + `internal/commerce`. Extraer solo si duele.
 
 ## Qué sí hay que decidir para codear Fase 0
 
-1. **Nombre y repo** — hermano de Mallard (recomendado) vs `cmd/commerce` en este repo.
-2. **Primer adapter real** — PrestaShop webservice nuestro (oficio) vs `http` genérico si el piloto no es PS. `fake` se hace igual.
-3. **Tienda piloto / fixtures** — sin un JSON de tienda real (anonimizado) o un staging, Fase 1 es teatro.
+1. **Primer adapter real** — PrestaShop webservice nuestro (oficio) vs `http` genérico si el piloto no es PS. `fake` se hace igual.
+2. **Tienda piloto / fixtures** — sin un JSON de tienda real (anonimizado) o un staging, Fase 1 es teatro.
 
-Cuando esas tres estén claras, Fase 0 es mecánica: contrato, `fake`, CLI, tests.
+Cuando esas dos estén claras, Fase 0 es mecánica: `internal/commerce` (contrato + `fake`), playbooks en `skills/commerce-kb`, tests.
 
 ## Apéndice — qué hay ya montado
 
