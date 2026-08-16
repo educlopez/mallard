@@ -14,7 +14,7 @@ deliberately out of scope).
 SDD workflow, Engram/persona injection, MCP server management, AI provider switcher /
 per-phase model assignment. These belong to a "configurator" product, not mallard.
 
-Commerce (see `docs/ecommerce-agent-team.md`) may steal gentle-ai *mental models*
-only: organic routing (inline / delegate / ceremony), delegate-only orchestrator,
-and a receipt+apply gate. It must not import SDD phases, Engram, GGA, persona,
-or the RDD review lifecycle.
+Commerce experts (see `docs/ecommerce-agent-team.md`) are the same shape as
+prestashop-expert / layout-builder: UX and performance KBs + agents + classifier
+types. Steal gentle-ai routing (inline vs delegate). Do not import SDD, Engram,
+GGA, persona, store adapters, or an ops/apply runtime.
