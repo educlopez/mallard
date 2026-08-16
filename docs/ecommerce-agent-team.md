@@ -1,258 +1,289 @@
-# Equipo de agentes ecommerce — investigación y plan
+# Equipo de agentes ecommerce — plan propio
 
-Propuesta para extender Mallard más allá del crew de **desarrollo** (theme, módulos, layout) hacia un crew de **operación comercial**: orquestación, ventas y optimización.
+Producto **nuestro**: un kernel de operación comercial (orquestación, ventas, optimización) que habla un modelo canónico. Cada tienda entra por un **adaptador que escribimos nosotros**. Sirve para cualquier ecommerce (PrestaShop, Shopify, Woo, Magento, custom, marketplace).
 
-Mallard hoy es un toolkit de desarrollo PrestaShop. Este documento no implementa agentes nuevos: define qué existe en el mercado, qué no hay que reinventar, y qué equipo tiene sentido construir encima de PrestaShop MCP + el patrón actual de skills / commands / subagents.
+## Decisión (esta iteración)
 
-## 1. Qué hay ya montado (investigación)
+- **No** dependemos del MCP Server de PrestaShop, MCP Tools Plus, Shopify MCP/UCP, Busony, VTEX, Agentforce, CrewAI Cloud, n8n ni ningún bus de terceros.
+- **No** es un skill más de Mallard pegado a una tienda PS. Mallard sigue siendo el toolkit de *desarrollo* PrestaShop. Esto es un **producto hermano**: ops comercial, platform-agnostic.
+- Los agentes **nunca** llaman a la API nativa de una plataforma. Solo ven el contrato canónico + políticas + cola de aprobación.
+- Un conector de tienda **sí** hace falta (webservice, Admin API, REST propia). Eso no es “plataforma extra”: es el I/O de la tienda. El conector es código nuestro, fino, sustituible.
+- Si algún día exponemos MCP, será **una fachada opcional de *nuestras* tools**, no una dependencia. El runtime habla CLI/JSON (y luego HTTP) que controlamos.
 
-El patrón “equipo de agentes + orquestador” **ya existe** en 2025–2026. Casi nadie lo tiene bien resuelto en PrestaShop de forma abierta y reutilizable. Lo que hay se agrupa en cuatro capas.
+La investigación de mercado (Shopify, VTEX, PS MCP, CrewAI, Atlas Mercator) queda en el [apéndice](#apéndice-qué-hay-ya-montado). Sirve para no copiar su lock-in. El diseño de abajo no los usa.
 
-### 1.1 Plataformas que venden el crew cerrado
+## Por qué este corte
 
-| Producto | Qué montaron | Encaje con nosotros |
-|----------|--------------|---------------------|
-| [Shopify Agents + UCP](https://shopify.dev/docs/agents) | MCP de catálogo/cart/checkout, Agentic Storefronts, Universal Commerce Protocol (con Google), pagos AP2 | Referencia de protocolos. No portable a PS. |
-| [VTEX AI Workspace](https://www.vtex.com/en-us/vtex-vision) | 4 agentes nativos: catálogo, promociones, search, BI. Orquestación insight → decisión → ejecución | El analog más cercano a “OS de ecommerce”. Cerrado, enterprise. |
-| [Salesforce Agentforce](https://www.salesforce.com/agentforce/) | Merchandiser, Personal Shopper, Buyer Agent; Flows + MuleSoft | Útil si el cliente vive en Salesforce. No es PrestaShop. |
-| Adobe Commerce / Brand Concierge | Agentes de discovery y catálogo | Mismo problema: stack distinto. |
+Cualquier crew “universal” que se ate a un MCP ajeno hereda el modelo, los scopes y el ritmo de esa plataforma. PrestaShop MCP no sirve en Shopify. Shopify UCP no sirve en una tienda custom. El patrón que sí escala —y que ya usan los kernels serios— es **un contrato + N adaptadores**.
 
-Lección: el mercado enterprise ya convergió en **agentes especializados + workspace de aprobación**, no en un chatbot único.
-
-### 1.2 PrestaShop: hay puente, no hay equipo
-
-| Pieza | Estado | Qué cubre |
-|-------|--------|-----------|
-| [PrestaShop MCP Server](https://docs.mcp.prestashop.com/en/0-getting-started/introduction/) (oficial, gratis, PS 8.2/9) | Producción | Tools de productos, stock, combinaciones, pedidos, clientes. Módulos terceros pueden declarar `#[McpTool]`, prompts y resources. |
-| [MCP Tools Plus](https://faq.businesstech.fr/en/faq/616-what-is-mcp-tools-plus) (BusinessTech) | Comercial | Reportes, roturas de stock, auditoría SEO, promociones, hilos de CS, approve/reject de acciones IA, anonimización GDPR. |
-| [Busony / Claude-Powered PS](https://busony.com/en/sites-ia/prestashop) | Servicio | Un Claude orquesta BO + agentes FO (shopping + support) vía MCP/WebMCP. |
-| [Artículo de Nicolas Dabène](https://nicolas-dabene.fr/en/blog/the-end-of-the-lone-coder-why-future-developers-will-be-ai-orchestrators-and-how-to-get-started-with-prestashop) | Ensayo | Constelación: merchandising (embeddings), fraude, soporte. MCP como piedra angular. |
-| [MCPBundles — workflows PS](https://www.mcpbundles.com/blog/prestashop-ai-store-operations-workflows) | Docs | Insiste en **workflows** (pre-launch audit, Friday order triage, localization), no lookups sueltos. ~76 tools en su skill. |
-
-Lección: PrestaShop ya expone **acciones**. Falta el **equipo con roles, guardrails y orquestación**. Eso es el hueco de Mallard.
-
-### 1.3 Open source y frameworks
-
-| Proyecto | Stack | Roles |
-|----------|-------|-------|
-| [Atlas Mercator](https://github.com/hhdhh/atlas-mercator) | LangGraph supervisor + RAG | `ListingOptimizer`, `SupportAgent`, `MarketingCopilot`, `IntelScout` + orquestador THOUGHT→PLAN→EXECUTE→SYNTHESIZE. Demo/ERP mock; Shopify real en roadmap. |
-| [IBM + CrewAI retail](https://github.com/IBM/ibmdotcom-tutorials/blob/main/crew-ai-projects/crewAI-multiagent-retail-example.md) | CrewAI + watsonx | Crew de “retail advisors” para shelf optimization. Tutorial, no tienda. |
-| CrewAI Shopify integration | CrewAI Enterprise | Un agente “E-commerce Manager” con tools de productos/pedidos/analytics. Un rol, no un equipo. |
-| [Nagent](https://nagent.ai/solutions/ecommerce), [CREAO](https://creao.ai/for-marketers/ecommerce-manager) | SaaS | Catálogo, pricing, markdown, SEO, inventory alerts, weekly briefing. Plantillas, no orquestación propia. |
-
-Patrón recurrente de consultoría ([Decision Crew](https://alexgenovese.com/multi-agent-ai-for-ecommerce-how-agentic-systems-are-reshaping-conversion-in-2026/)):
+Mallard ya piensa así por otro lado: `internal/agents.Adapter` es un conector por herramienta de coding. Aquí el analog es un conector por *motor de tienda*.
 
 ```
-Orchestrator
-  ├── Profile / CRM
-  ├── Inventory
-  ├── Pricing
-  └── Logistics
+  /briefing  /catalog-audit  /order-triage
+                 │
+                 ▼
+        ┌─────────────────┐
+        │  Orchestrator   │  enruta, reconcilia, aplica políticas
+        │  + playbooks    │
+        └────────┬────────┘
+                 │  solo tipos canónicos
+                 ▼
+        ┌─────────────────┐
+        │  Commerce API   │  catalog / inventory / orders / sales / pricing / promo
+        │  (nuestro)      │
+        └────────┬────────┘
+                 │
+     ┌───────────┼───────────┬────────────┐
+     ▼           ▼           ▼            ▼
+  adapter.ps  adapter.shopify  adapter.woo  adapter.fake
+  (WS nuestro) (Admin API)     (REST)       (fixtures)
+     │           │           │            │
+     ▼           ▼           ▼            ▼
+  cualquier tienda que exponga un API que sepamos mapear
 ```
 
-Los lifts de conversión que se publican (25–40%, AOV 2.3x) son **anecdóticos de vendors**. Servir de hipótesis, no de KPI prometido.
+## Principios
 
-### 1.4 Protocolos que hay que conocer (no implementar todos)
+1. **Contrato primero.** Product, Variant, Order, Stock, Price, Promo son *nuestros* tipos. El adaptador traduce. Si un motor no tiene “combinación”, el adaptador inventa una variante 1:1 y lo declara en `capabilities`.
+2. **Capabilities, no ifs de plataforma en los agentes.** `inventoryRealtime`, `promos`, `orderNotes`, `writePrice`… El playbook se degrada, no se reescribe.
+3. **Un objetivo por agente.** Pricing no escribe fichas. Pedidos no tocan SEO.
+4. **Read-first.** Fase 1 solo lee y propone. Mutar precio/stock/promo = propuesta → humano → `apply`.
+5. **Playbooks deterministas donde se pueda.** Auditoría de catálogo y cola de pedidos son reglas + datos. El LLM narra y reconcilia; no es el bus.
+6. **PII mínima.** El kernel anonimiza antes de mandar nada a un modelo. Coste, email, teléfono no salen del adaptador sin flag.
+7. **Cero promesa de lift.** Se mide contra el baseline de esa tienda.
+8. **Sin frameworks de orquestación ajenos.** El orquestador es código nuestro (router + políticas). No CrewAI, no LangGraph Cloud.
 
-| Protocolo | Para qué | ¿Lo necesitamos ya? |
-|-----------|----------|---------------------|
-| **MCP** | Tools/resources hacia la tienda | Sí. Es el bus. |
-| **A2A** | Agente ↔ agente sin pasar siempre por el supervisor | Más adelante. |
-| **UCP** | Discovery + cart + checkout para agentes de compra | Solo si queremos storefront agentic (ChatGPT/Gemini). Shopify-first hoy. |
-| **AP2** | Mandatos de pago de un agente | No, hasta UCP. |
+## Contrato canónico (v0)
 
-### 1.5 Conclusión de mercado
+Lo que todo adaptador debe implementar o marcar `unsupported`.
 
-1. **No reinventar el conector.** PrestaShop MCP Server + (opcional) MCP Tools Plus ya son el I/O.
-2. **No copiar VTEX/Shopify.** Su ventaja es el dato nativo. La nuestra es PrestaShop + Panda/ElementFlow + el crew de desarrollo que ya existe.
-3. **El diferencial de Mallard** es unir **dev crew + commerce crew** en el mismo CLI: el mismo equipo que arregla el child theme puede pedir un briefing de ventas o una auditoría de catálogo.
-4. **Nadie publicó un crew PrestaShop open-source** con roles, guardrails y comandos listos. Hay puente (MCP) y hay servicios (Busony). No hay “Mallard Commerce”.
+| Área | Tipos | Operaciones |
+|------|-------|-------------|
+| Identidad | `Store` (`id`, `platform`, `locale`, `currency`, `timezone`) | `Ping`, `Capabilities` |
+| Catálogo | `Product`, `Variant`, `Category`, `Media`, `SEO` | `ListProducts`, `GetProduct`, `ListCategories` |
+| Inventario | `Stock` (por variant + location opcional) | `ListStock`, `StockGaps` (derivable en kernel si el adapter solo da raw) |
+| Precios | `Price` (list, sale, cost opcional, margin) | `ListPrices`, `ProposePrice` / `ApplyPrice` (gated) |
+| Promos | `Promo` (tipo, ventana, stack, techo) | `ListPromos`, `PromoSanity` |
+| Pedidos | `Order`, `Line`, `PaymentState`, `FulfillmentState`, `Refund` | `ListOrders`, `GetOrder`, `ProposeStatus` (gated) |
+| Ventas | agregados, no filas PII | `SalesKpis(from, to, groupBy)` — el adapter puede calcular o el kernel agrega pedidos |
+| Clientes | `CustomerRef` (id opaco) | Solo ids + segmento; PII off by default |
 
-## 2. Qué tiene Mallard hoy (y qué no)
+`Capabilities` ejemplo:
 
-Crew actual — solo desarrollo:
-
-| Agente | Dominio |
-|--------|---------|
-| `prestashop-expert` | Core PS 8/9 |
-| `panda-expert` | Panda + `st*` + Easy Builder |
-| `layout-builder` | Layout/CSS child theme |
-| `task-classifier` | Enruta tareas Intervals → skill/agente |
-
-No hay agente que lea pedidos, márgenes, stock, cart rules o GA4. `task-classifier` ya es un **orquestador mínimo** (clasifica y enruta, no ejecuta). Ese patrón se reutiliza.
-
-## 3. Principios de diseño
-
-1. **Un objetivo por agente.** El de pricing no escribe fichas. El de pedidos no toca SEO. Los fallos quedan aislados.
-2. **Read-first.** Fase 1 solo lee y recomienda. Escribir precio, stock o cart rule exige aprobación humana (el approve/reject de MCP Tools Plus es el modelo).
-3. **Orquestador reconcilia, no adivina.** Si inventario dice “poco stock” y pricing dice “margen alto”, el orquestador elige escasez, no descuento. Desacuerdos por encima de umbral → humano.
-4. **MCP es el bus; Mallard es el cerebro.** Skills y agentes viven aquí. Las mutaciones van a la tienda por MCP, no por SQL ni back-office scraping.
-5. **Misma forma que el resto de Mallard.** `claude/agents/*.md` + skill + comando `/…`. No meter CrewAI/LangGraph en el binario Go salvo que un flujo lo pida de verdad (estado largo, HITL persistente).
-6. **GDPR y AI Act.** Anonimizar PII antes de mandar a un LLM público. Decisiones que afectan al consumidor (precio dinámico, oferta personalizada) deben ser auditables y, en UE, transparentes.
-7. **No prometer lifts.** Medir contra baseline de la tienda.
-
-## 4. El equipo propuesto
-
-Dos crews. El de desarrollo no se toca. El comercial es nuevo.
-
-```
-                    ┌─────────────────────────┐
-                    │  commerce-orchestrator  │
-                    │  (enruta + reconcilia)  │
-                    └───────────┬─────────────┘
-          ┌──────────┬──────────┼──────────┬──────────┐
-          ▼          ▼          ▼          ▼          ▼
-     sales-      merch-     inventory-  pricing-   order-
-     analyst     andiser    ops         advisor    triage
-          │          │          │          │          │
-          └──────────┴────┬─────┴──────────┴──────────┘
-                          ▼
-                   PrestaShop MCP
-              (tools / prompts / resources)
+```yaml
+reads: [catalog, inventory, orders, prices, promos, sales]
+writes: []          # vacío en fase 1
+notes: false
+multiLocation: false
+variants: true
 ```
 
-### 4.1 Núcleo (construir primero)
+Un adaptador incompleto es válido. El orquestador no llama lo que no existe.
 
-| Agente | Misión | Lee | Escribe (solo con OK) | Señal de éxito |
-|--------|--------|-----|------------------------|----------------|
-| `commerce-orchestrator` | Clasifica el pedido (“briefing semanal”, “auditoría pre-lanzamiento”, “viernes de pedidos”) y reparte. Reconcilia conflictos. | Salidas de los especialistas | Nunca muta la tienda | Ruta correcta + decisión explicable |
-| `sales-analyst` | KPIs: ventas, conversión, AOV, top/bottom SKU, vs periodo anterior | Pedidos, productos, (luego) analytics | Nada | Briefing accionable en <5 min de lectura |
-| `merchandiser` | Salud de catálogo: sin foto, categoría vacía, ficha pobre, combinación no comprable, related/cross-sell | Productos, combinaciones, categorías, imágenes | Textos/asignación de categoría | Checklist priorizado pre-lanzamiento |
-| `inventory-ops` | Roturas, sell-through, variantes ocultas con stock 0, proveedores inactivos en SKU vivos | Stock, combinaciones, proveedores | Ajustes de stock / alertas de compra | Cero “activo pero no comprable” sorpresa |
-| `order-triage` | Cola operativa: impagos viejos, pedidos atascados, reembolsos, hilos CS abiertos | Pedidos, historial, carriers, customer threads | Cambio de estado / nota | Cola del viernes ordenada por urgencia |
+## Runtime (nuestro, local-first)
 
-### 4.2 Dinero (segunda oleada, siempre con techo)
-
-| Agente | Misión | Guardrail |
-|--------|--------|-----------|
-| `pricing-advisor` | Specific prices, suelo de margen, watch de competencia | **Recomienda**. Aplicar solo si margen ≥ suelo y descuento ≤ techo (p.ej. 15%). |
-| `promo-optimizer` | Cart rules vivas/caducadas, abandono, escasez vs dto | No apilar descuentos que rompan margen. Preferir escasez si stock bajo + margen alto. |
-
-### 4.3 Crecimiento (tercera oleada)
-
-| Agente | Misión | Nota |
-|--------|--------|------|
-| `seo-listing` | Titles, metas, copy de categoría, interlinking | Encaja con `ps-translate` y KBs de theme. |
-| `cx-support` | RAG de políticas + lookup de pedido | Customer-facing; otro canal y otro riesgo. |
-| `intel-scout` | Precios/catálogo competencia | Empieza read-only (URLs), sin scraping agresivo. |
-
-### 4.4 Lo que no es un agente
-
-- Un “Ecommerce God” que hace de todo.
-- Un chatbot FO sin MCP ni políticas.
-- Repricing autónomo 24/7.
-- Sustituto de GA4/Looker: el analyst **narra y prioriza**, no reemplaza BI.
-
-## 5. Flujos de orquestación (los que importan)
-
-Copiar la idea de MCPBundles: workflows de ops, no “list products”.
-
-| Flujo | Trigger | Agentes | Output |
-|-------|---------|---------|--------|
-| **Weekly briefing** | Lunes / `/briefing` | analyst → inventory → merchandiser → orchestrator | Un markdown: qué vender, qué se acaba, qué ficha está rota |
-| **Pre-launch audit** | Antes de campaña | merchandiser + inventory + promo | Checklist: fotos, stock comprable, cart rules vivas |
-| **Friday order triage** | Viernes / `/order-triage` | order-triage | Cola rankeada (impago, CS abierto, reembolso) |
-| **Cart-rule sanity** | Al crear promo | promo + pricing + inventory | “¿Esta regla pierde dinero o pisa otra?” |
-| **Listing refresh** | SKU nuevo o ficha pobre | seo-listing + merchandiser | Copy + metas; humano publica |
-| **Abandon / recover** (luego) | Evento carrito | orchestrator + inventory + pricing | Oferta o espera; no dto ciego |
-
-El orquestador es el primo de `task-classifier`:
+Producto hermano de Mallard: un binario (Go, mismo ADN: un CLI, cero daemon SaaS).
 
 ```
-TYPE: briefing | catalog-audit | order-triage | pricing-review | promo-review | listing | unknown
-ROUTE: <agent/skill>
+commerce                  # CLI
+  store add|ls|ping
+  pull                    # snapshot normalizado vía adapter
+  briefing
+  catalog-audit
+  order-triage
+  propose ls|show
+  apply <id>              # solo si policy + humano
+  audit tail
+```
+
+Estado por tienda (en disco, nuestro):
+
+```
+~/.commerce/stores/<id>/
+  store.yaml              # adapter, endpoint, secret ref, policies
+  snapshot/               # JSON canónico (cache, no source of truth)
+  proposals/
+  audit.jsonl
+```
+
+`store.yaml` (forma, no implementación):
+
+```yaml
+id: acme-prod
+adapter: prestashop        # o shopify | woo | magento | http | fake
+endpoint: https://shop.example.com
+auth: env:ACME_API_KEY
+locale: es-ES
+currency: EUR
+policies:
+  readOnly: true
+  marginFloor: 0.35
+  maxDiscount: 0.15
+  unpaidDays: 14
+```
+
+Los “agentes” son paquetes nuestros: prompt + tools permitidas + playbook. Se invocan desde el CLI o, si queremos DX tipo Mallard, desde un comando que **llama al CLI**, no a un MCP ajeno.
+
+```
+claude/commands/briefing.md  →  exec: commerce briefing --store $STORE
+```
+
+Eso es opcional y no acopla el kernel a Claude.
+
+## Equipo (igual de especialización, otro bus)
+
+```
+                commerce-orchestrator
+                 (router + políticas)
+     ┌──────────┬──────────┼──────────┬──────────┐
+     ▼          ▼          ▼          ▼          ▼
+ sales-     merch-    inventory-  pricing-   order-
+ analyst    andiser   ops         advisor    triage
+     │          │          │          │          │
+     └──────────┴────┬─────┴──────────┴──────────┘
+                     ▼
+              Commerce API (nuestra)
+```
+
+| Agente | Misión | Éxito |
+|--------|--------|-------|
+| `orchestrator` | Clasifica el trabajo, reparte, reconcilia conflictos, decide `read \| propose \| apply-with-cap \| escalate` | Ruta correcta + decisión explicable |
+| `sales-analyst` | Ventas, AOV, top/bottom SKU, vs periodo | Briefing <5 min de lectura |
+| `merchandiser` | Sin media, categoría vacía, ficha pobre, variant no comprable | Checklist priorizado |
+| `inventory-ops` | Roturas, sell-through, activo-pero-no-comprable | Cero sorpresas de stock |
+| `order-triage` | Impagos, atascados, reembolsos | Cola rankeada |
+| `pricing-advisor` | Recomienda precio dentro de suelo/techo | Nunca aplica solo en v1 |
+| `promo-optimizer` | Promos que se pisan o rompen margen | “esta regla pierde dinero” |
+
+Más adelante (no v1): `seo-listing`, `cx-support`, `intel-scout`. Customer-facing es otro producto de riesgo.
+
+Lo que **no** es un agente: un “Ecommerce God”, un chatbot FO, repricing 24/7, un reemplazo de GA4.
+
+## Flujos (ops, no “list products”)
+
+| Flujo | Quién | Output |
+|-------|-------|--------|
+| Weekly briefing | analyst → inventory → merchandiser → orchestrator | Qué vender, qué se acaba, qué ficha está rota |
+| Pre-launch audit | merchandiser + inventory + promo | Fotos, comprable, promos vivas |
+| Order triage | order-triage | Cola por urgencia |
+| Promo sanity | promo + pricing + inventory | ¿Pisa otra regla? ¿rompe margen? |
+| Listing refresh | seo-listing + merchandiser | Copy; humano publica |
+
+Salida del orquestador (estable, testeable):
+
+```
+TYPE: briefing | catalog-audit | order-triage | pricing-review | promo-review | unknown
+ROUTE: <agent>
 WHY: …
 CONFIDENCE: high|medium|low
 AUTONOMY: read | propose | apply-with-cap | escalate
 ```
 
-## 6. Cómo encaja en Mallard (sin CrewAI el día 1)
+## Adaptadores (nuestro código, una plataforma cada uno)
 
-Reutilizar el mecanismo que ya documenta `docs/adding-skills.md`.
+El kernel **no** conoce SKUs de PrestaShop ni GraphQL de Shopify.
 
-```
-skills/commerce-kb/          # playbooks: KPIs, guardrails, workflows
-skills/ps-mcp/               # cómo conectar MCP Server, scopes, dry-run
-claude/agents/
-  commerce-orchestrator.md
-  sales-analyst.md
-  merchandiser.md
-  inventory-ops.md
-  order-triage.md
-claude/commands/
-  commerce.md                # /commerce  → orquestador
-  briefing.md                # /briefing
-  catalog-audit.md
-  order-triage.md
-```
+| Adapter | Habla con | Cuándo |
+|---------|-----------|--------|
+| `fake` | Fixtures JSON canónicos | Día 1. Tests, demos, CI. Obligatorio. |
+| `http` | REST/JSON mapeado por `mapping.yaml` | Tienda custom o headless rara |
+| `prestashop` | Webservice nativo **nuestro** (no el módulo MCP) | Primera tienda real, donde ya tenemos oficio |
+| `shopify` | Admin API | Segunda plataforma, valida que el contrato no es “PS disfrazado” |
+| `woocommerce` / `magento` | REST | Cuando haya cliente |
 
-`task-classifier` gana tipos `commerce-briefing`, `catalog-audit`, `order-triage` cuando el módulo Intervals sea tienda/ops y no Disseny.
+Regla: un adaptador nuevo = implementación del contrato + test de conformidad contra las mismas fixtures. Si el test de `fake` pasa y el de `shopify` no mapea `Variant.buyable`, se arregla el adapter, no el merchandiser.
 
-**¿CrewAI o LangGraph?** No en v1. Un subagent Claude + MCP cubre briefing y auditorías. Subir a LangGraph solo si hace falta checkpoint / HITL de horas (campaña de repricing por oleadas). CrewAI encaja si un cliente quiere un servicio Python aparte; no pertenece al binario Go.
+No scrapeamos back-offices. No SQL directo a la BD de la tienda (rompe upgrades y GDPR).
 
-## 7. Fases
+## Relación con Mallard
 
-### Fase 0 — Bus (sin agentes de negocio)
+| | Mallard | Este producto |
+|--|---------|----------------|
+| Job | Desarrollar temas/módulos PS | Operar y optimizar **cualquier** tienda |
+| Usuario | Dev | Ops / growth / nosotros en clientes |
+| I/O | repo git, Lando | APIs de tienda vía adapters |
+| Agentes | prestashop-expert, panda-expert… | sales-analyst, merchandiser… |
 
-- Documentar setup: `ps_mcp_server` + webservice + conector Claude/Cursor.
-- Skill `ps-mcp`: scopes, dry-run, “nunca desactivar auth en prod”.
-- Decidir si MCP Tools Plus entra en el stack de agencia (reportes + approve/reject + GDPR) o se reimplementa lo mínimo.
+Puente futuro (opcional): el merchandiser marca “sin foto” → abre tarea Intervals → Mallard `ps-image-regen`. Eso es A2A *nuestro*, no un protocolo externo.
 
-### Fase 1 — Read-only crew
+**No** meter el kernel dentro de `skills/` de Mallard. Contamina el CLI de desarrollo y acopla el modelo a PrestaShop. Repo hermano (o monorepo con `cmd/commerce` claramente separado). Recomendación: **repo hermano**, mismo estilo de release (Go, un binario).
 
-- Agentes: orchestrator, sales-analyst, merchandiser, inventory-ops, order-triage.
-- Comandos `/briefing`, `/catalog-audit`, `/order-triage`.
-- KB `commerce-kb` con playbooks y umbrales por defecto (stock bajo, pedido impago >14 días, etc.).
-- Piloto en **una** tienda Lando/staging. Cero writes.
+## Fases
 
-### Fase 2 — Writes con techo
+### Fase 0 — Kernel vacío + fake
 
-- `pricing-advisor` + `promo-optimizer`.
-- Toda mutación: diff → humano → apply.
-- Techos por tienda en un `commerce.toml` gitignored del proyecto cliente (suelo de margen, dto máx, quién aprueba).
+- Tipos canónicos + interface `Adapter`.
+- CLI: `store add`, `ping`, `pull`.
+- Adapter `fake` con un catálogo/pedidos de fixture.
+- Policy engine: `readOnly`, techos.
+- Audit log.
+- Cero LLM. Cero red de tienda real.
 
-### Fase 3 — Crecimiento
+### Fase 1 — Playbooks read-only sobre el fake (y un adapter real)
 
-- `seo-listing` (reusa `ps-translate` / image regen).
-- Extender classifier Intervals.
-- Métricas: tiempo de briefing, % de recomendaciones aplicadas, incidentes de write.
+- `catalog-audit`, `order-triage`, `sales.kpis` como código (reglas).
+- Un adapter real (recomendado: PrestaShop webservice *nuestro*, porque lo sabemos operar) **o** `http` si el piloto no es PS.
+- Briefing: el LLM solo redacta a partir de JSON que ya calculó el kernel.
+- Piloto en staging. `writes: []`.
 
-### Fase 4 — Solo si hay demanda de cliente
+### Fase 2 — Segundo adapter
 
-- `cx-support` / shopping agent (FO, WebMCP).
-- UCP si un marketplace agentic lo pide.
-- A2A entre crews (dev ↔ commerce): p.ej. merchandiser detecta “sin foto” → abre tarea → `ps-image-regen`.
+- Shopify (u otra distinta a la primera). Si el contrato cruje, se corrige ahora, no a la décima tienda.
+- Cola de `proposals` + `apply` con diff.
 
-## 8. Riesgos
+### Fase 3 — Dinero con techo
+
+- `pricing-advisor`, `promo-optimizer`.
+- Writes solo con `marginFloor` / `maxDiscount` y aprobación.
+
+### Fase 4 — DX y crecimiento
+
+- Comandos opcionales en el coding agent que llaman al CLI.
+- Más adapters.
+- Fachada MCP **nuestra** solo si hace falta enchufar Claude Desktop. Sigue siendo I/O nuestro.
+
+## Riesgos
 
 | Riesgo | Mitigación |
 |--------|------------|
-| LLM interpreta mal un tool y cambia un precio | Writes off by default; approve/reject; log de cada tool call |
-| PII a Claude/ChatGPT | Anonimizar (Tools Plus o capa propia); minimizar campos |
-| Multi-shop: mismo SKU, otro stock/precio | El prompt obliga `id_shop`; auditorías por tienda |
-| Coste 2–4× vs un solo modelo | Empezar con 2–3 agentes; modelos baratos en analyst, mejores en orquestador |
-| “IA God” que pisa al experto PS | Commerce crew **no** toca theme/módulos; eso sigue en prestashop-expert / panda-expert |
-| Promesas de conversión | Baseline + A/B; no vender el plan con % de vendors |
+| El contrato se vuelve “PrestaShop con otros nombres” | Segundo adapter distinto en Fase 2; tests de conformidad |
+| LLM muta un precio | Writes off; `apply` explícito; audit |
+| PII al modelo | Anonimizar en el kernel; sales solo agregados |
+| Multi-store / multi-currency | `Store` es la unidad; un briefing = una store |
+| “Plataforma extra” se cuela (SaaS de agents) | Prohibido en runtime. LLM es un vendor de inferencia, como ya usamos para codear; no es el orquestador |
+| Scope creep FO / checkout agentic | Fuera de v1. Eso es UCP/AP2 y otro producto |
 
-## 9. Decisión que hay que tomar antes de codear
+## Qué ya no hay que decidir
 
-1. **¿Mallard Commerce es producto de agencia (operar tiendas de clientes) o feature del CLI de desarrollo?** Recomendación: las dos, pero el CLI solo trae agentes + playbooks; la tienda trae MCP.
-2. **¿MCP Tools Plus o solo el server oficial?** Plus acelera reportes y HITL. El oficial basta para Fase 1 si aceptamos armar los playbooks.
-3. **¿Primera tienda piloto?** Sin tienda real (o staging) el crew es teatro.
-4. **¿Primer flujo?** Recomendación: `/briefing` + `/catalog-audit`. Valor alto, riesgo bajo, encaja con el día a día de ops.
+- ¿MCP Tools Plus o MCP oficial? **Ninguno.**
+- ¿CrewAI / LangGraph? **No.**
+- ¿Agnóstico o solo PS? **Agnóstico, adapters nuestros.**
+- ¿Mallard feature o producto? **Producto hermano.**
 
-## 10. Fuentes
+## Qué sí hay que decidir para codear Fase 0
 
-- [PrestaShop MCP Server docs](https://docs.mcp.prestashop.com/en/0-getting-started/introduction/)
-- [PrestaShop — hablar con la tienda](https://prestashop.com/blog/tech-en/taking-your-first-steps-with-ai-how-to-simply-talk-to-your-prestashop-store/)
-- [MCP Tools Plus FAQ](https://faq.businesstech.fr/en/faq/616-what-is-mcp-tools-plus)
-- [MCPBundles — store operations are workflows](https://www.mcpbundles.com/blog/prestashop-ai-store-operations-workflows)
-- [Nicolas Dabène — AI orchestrators + PrestaShop](https://nicolas-dabene.fr/en/blog/the-end-of-the-lone-coder-why-future-developers-will-be-ai-orchestrators-and-how-to-get-started-with-prestashop)
-- [Busony Claude-Powered PrestaShop](https://busony.com/en/sites-ia/prestashop)
-- [Shopify Agents / UCP](https://shopify.dev/docs/agents)
-- [VTEX Vision / AI Workspace](https://www.vtex.com/en-us/vtex-vision)
-- [Salesforce Agentforce](https://www.salesforce.com/agentforce/)
-- [Atlas Mercator](https://github.com/hhdhh/atlas-mercator)
-- [Alex Genovese — Decision Crew](https://alexgenovese.com/multi-agent-ai-for-ecommerce-how-agentic-systems-are-reshaping-conversion-in-2026/)
-- [Vortex IQ — A2A orchestration](https://www.vortexiq.ai/resources/blog/agent-to-agent-orchestration-next-frontier)
-- [CrewAI 1.10 MCP + A2A](https://www.datapath.ai/blog/crewai-1-10-sistemas-multi-agente-mcp-a2a-2026)
+1. **Nombre y repo** — hermano de Mallard (recomendado) vs `cmd/commerce` en este repo.
+2. **Primer adapter real** — PrestaShop webservice nuestro (oficio) vs `http` genérico si el piloto no es PS. `fake` se hace igual.
+3. **Tienda piloto / fixtures** — sin un JSON de tienda real (anonimizado) o un staging, Fase 1 es teatro.
+
+Cuando esas tres estén claras, Fase 0 es mecánica: contrato, `fake`, CLI, tests.
+
+## Apéndice — qué hay ya montado
+
+El patrón “equipo + orquestador” existe. Casi todo está atado a una plataforma o a un bus ajeno. Por eso no lo usamos como runtime.
+
+| Cosa | Qué es | Por qué no es nuestro bus |
+|------|--------|---------------------------|
+| Shopify Agents + UCP | MCP catálogo/cart/checkout | Lock-in Shopify |
+| VTEX AI Workspace | Agentes catálogo/promo/search/BI | Cerrado, enterprise |
+| Salesforce Agentforce | Merchandiser, Personal Shopper | Vive en Salesforce |
+| PrestaShop MCP Server + Tools Plus | Tools oficiales / BusinessTech | Solo PS; approve/reject y GDPR son ideas a **reimplementar** |
+| Busony | Claude + MCP/WebMCP sobre PS | Servicio de terceros |
+| Atlas Mercator | LangGraph listing/support/intel | Demo; ERP mock |
+| CrewAI Shopify | Un “Ecommerce Manager” | Un rol + SaaS |
+| Nagent / CREAO | Plantillas SaaS | No es orquestación nuestra |
+| Omnix / thorprovider adapters | Contrato + N adapters | Confirma el patrón; no lo adoptamos como dep |
+
+Protocolos (conocer, no depender): MCP (fachada opcional *nuestra*), A2A (más tarde, entre *nuestros* crews), UCP/AP2 (solo si un día hacemos storefront agentic).
+
+Fuentes: [PS MCP](https://docs.mcp.prestashop.com/en/0-getting-started/introduction/), [Tools Plus](https://faq.businesstech.fr/en/faq/616-what-is-mcp-tools-plus), [Shopify Agents](https://shopify.dev/docs/agents), [VTEX Vision](https://www.vtex.com/en-us/vtex-vision), [Atlas Mercator](https://github.com/hhdhh/atlas-mercator), [Decision Crew](https://alexgenovese.com/multi-agent-ai-for-ecommerce-how-agentic-systems-are-reshaping-conversion-in-2026/), [Omnix gateway](https://github.com/OmnixHQ/omnix-gateway).

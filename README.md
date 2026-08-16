@@ -182,7 +182,7 @@ claude/agents/                Claude subagents (symlinked to ~/.claude/agents/, 
 .goreleaser.yaml              Multi-platform build + brews/scoops publish
 install.sh                    Curl-pipe installer (downloads release binary)
 doctor.sh                     Bash dependency check (claude CLI, node, pnpm)
-docs/                         Notes on adding skills/commands; ecommerce agent-team plan
+docs/                         Notes on adding skills/commands; owned commerce-kernel plan
 ```
 
 ## Adding a skill
