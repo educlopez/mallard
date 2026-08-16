@@ -6,7 +6,9 @@ Mismo molde que `prestashop-expert` / `panda-expert` / `layout-builder`: knowled
 
 ## Qué estás montando (el resultado)
 
-Un **equipo de expertos** en el mismo Claude/Cursor de siempre. No operan la tienda. **Diagnosticán y prescriben** sobre el proyecto abierto (el child theme, el checkout, el peso de la home). Quien implementa sigue siendo `layout-builder` o tú.
+Un **equipo de expertos** en el mismo Claude/Cursor de siempre. No operan la tienda. **Diagnosticán y prescriben** oficio de storefront: PDP, cart, checkout, búsqueda, móvil, LCP. El CWD puede ser un theme Shopify, Woo, Magento, Hydrogen, un child PS o un front custom. Quien implementa sigue siendo `layout-builder` (o el worker del stack) o tú.
+
+El *cómo* en una plataforma concreta (Panda, Dawn, Flatsome, Hydrogen) no vive en estos expertos: vive en las KBs de plataforma que ya hay, o en una nota **En este stack**.
 
 Hoy el hueco se ve así:
 
@@ -28,7 +30,7 @@ Hoy el hueco se ve así:
 tú:     el checkout en móvil se siente eterno y la gente no paga
 
 Mallard: [classifier → ecommerce-ux-expert]
-         Revisa templates/checkout + CSS del child (CWD).
+         Mira el CWD: templates/código de checkout (da igual el motor).
          Hallazgos:
          - 11 campos en guest; Baymard: teléfono y empresa sobran para este vertical
          - CTA bajo el fold en 375px; el resumen tapa el pagar
@@ -41,12 +43,12 @@ Mallard: [classifier → ecommerce-ux-expert]
 tú:     la home va a trompicones, LCP > 4s
 
 Mallard: [classifier → ecommerce-perf-expert]
-         Mira el child: slider hero, 8 webs de st*, imágenes 2400px, JS del carrito.
+         Mira el storefront: hero pesado, related above-the-fold, imágenes 2400px, JS de reviews/pixels.
          Prescripción:
          - hero: una imagen, width/height, fetchpriority
-         - no cargar el slider de related en above-the-fold
+         - no cargar related en above-the-fold
          - third-party: diferir el de reviews
-         Verificar: Lighthouse local en la URL Lando, no “yo creo que va mejor”.
+         Verificar: Lighthouse en la URL local (o JSON), no “yo creo que va mejor”.
 ```
 
 `/task 41953` gana tipos `ux` y `perf`. Si el ticket dice “Disseny, el botón de comprar no se ve”, puede ser layout (CSS) o UX (jerarquía). El classifier elige; si duda, pregunta.
@@ -73,8 +75,8 @@ Orquestación = el `task-classifier` que ya existe, ampliado. No un “Ecommerce
 
 | Agente | Oficio | Mira | No hace |
 |--------|--------|------|---------|
-| `ecommerce-ux-expert` | Conversión y oficio de tienda: checkout, PDP, PLP, cart, búsqueda, confianza, móvil, merchandising visual | Templates, CSS, builder, flujos reales del CWD | No maqueta él (delega a `layout-builder`). No toca módulos PS de negocio |
-| `ecommerce-perf-expert` | Velocidad que afecta a venta: LCP/INP/CLS, imágenes, JS/CSS budget, third-parties, peso de cart/checkout | Assets, sliders, fuentes, requests, Lando | No “optimiza” a ciegas. Prescribe + cómo medir |
+| `ecommerce-ux-expert` | Conversión y oficio de tienda: checkout, PDP, PLP, cart, búsqueda, confianza, móvil, merchandising visual | Templates, CSS, builder, flujos reales del CWD | No maqueta él (delega a `layout-builder`). No instala apps ni toca catálogo/pedidos |
+| `ecommerce-perf-expert` | Velocidad que afecta a venta: LCP/INP/CLS, imágenes, JS/CSS budget, third-parties, peso de cart/checkout | Assets, sliders, fuentes, requests, URL local | No “optimiza” a ciegas. Prescribe + cómo medir |
 | `task-classifier` | Tipos nuevos: `ux`, `perf` | Título / notas / módulo | Sigue sin hacer el trabajo |
 
 Cada experto es CWD-first, como los otros: primero el proyecto, luego la KB.
@@ -89,9 +91,9 @@ Cada experto es CWD-first, como los otros: primero el proyecto, luego la KB.
 ### Relación con lo que ya hay
 
 - **UX prescribe, `layout-builder` ejecuta.** “El CTA queda bajo el fold” → el builder mueve el bloque. Si el experto UX se pone a editar 15 CSS, está roto (mismo espíritu `delegate_only` de gentle-ai).
-- **Perf prescribe, tú o un skill concreto ejecutan.** Regen de imágenes → `ps-image-regen`. CSS build → `ps-css-build`. El experto no inventa un pipeline.
-- **Panda/PS expert** siguen siendo la fuente de “cómo se hace en esta plataforma”. El UX no reescribe `panda-kb`; dice *qué* hay que conseguir y pregunta al experto de theme *con qué módulo*.
-- Playbooks **agnósticos** (un checkout es un checkout). Notas “en Panda / ElementFlow / PS 9” viven en la KB y apuntan a las KBs ya existentes.
+- **Perf prescribe, tú o un skill concreto ejecutan.** Regen de imágenes, build de CSS, CDN: el experto nombra el *qué*; el skill/worker del stack hace el *cómo*. No inventa un pipeline.
+- **Expertos de plataforma** (PS, Panda, o el que toque) son la fuente de “cómo se hace aquí”. El UX no reescribe esas KBs; dice *qué* hay que conseguir y pregunta *con qué pieza del theme*.
+- Playbooks **agnósticos** (un checkout es un checkout). **En este stack** es una nota al CWD, no el oficio.
 
 ## Knowledge bases (lo que de verdad acumulamos)
 
@@ -102,7 +104,7 @@ skills/ecommerce-ux-kb/          # SKILL.md = router de superficies, no dump
   references/
     homepage-and-navigation.md   # home, nav, PLP, product card
     product-page.md
-    cart-and-checkout.md         # en PS el checkout SÍ es nuestro (Hydrogen lo delega)
+    cart-and-checkout.md         # checkout propio vs hosted (Shopify Checkout vs Woo/Magento/PS/custom)
     search-and-filters.md
     mobile.md                    # tap, sticky CTA, drawers — sin mezclar LCP
     _index.md
@@ -111,7 +113,7 @@ skills/ecommerce-perf-kb/         # SKILL.md = presupuesto + cómo priorizar
   references/
     cwv.md                       # LCP / INP / CLS (umbrales Google)
     images.md
-    js-and-third-parties.md      # sliders st*, reviews, pixels
+    js-and-third-parties.md      # sliders, reviews, pixels, tag managers
     how-to-measure.md            # Lighthouse local; JSON fuera del contexto
     _index.md
 ```
@@ -119,7 +121,7 @@ skills/ecommerce-perf-kb/         # SKILL.md = presupuesto + cómo priorizar
 Reglas de la KB:
 
 - SKILL.md enruta (“esto es PDP → lee product-page.md”). No vuelques toda la KB.
-- Cada guideline: título imperativo + **Source** + **Why** + **En este stack** (Panda / ElementFlow / child checkout). Microformato de Hydrogen, sin su código Shopify.
+- Cada guideline: título imperativo + **Source** + **Why** + **En este stack** (solo si el CWD lo pide: Dawn, Flatsome, Panda, Hydrogen…). Microformato de Hydrogen, sin su código Shopify.
 - Principio primero, plataforma después.
 - Nada de lifts inventados. Hydrogen lo dice y luego cita “+35% conversión”: no copiamos números. Si no hay fuente pública o caso vuestro, se marca opinión.
 - Checkout/pago/a11y = “high stakes”: se dice claro, sin % inventado.
@@ -139,7 +141,7 @@ No hace falta `mallard commerce`. No hay subcomando nuevo. `mallard update` enla
 
 1. **Criterio ≠ implementación.** El experto diagnostica; el worker (o el humano) cambia el theme.
 2. **CWD-first.** La home de *este* cliente, no un checklist genérico de internet.
-3. **Agnóstico de plataforma en el oficio, concreto en el cómo.** El agente UX no se llama `ps-ux-expert`.
+3. **Agnóstico de plataforma en el oficio, concreto en el cómo.** El agente UX no se llama `ps-ux-expert` ni `shopify-ux-expert`. La investigación tampoco se filtra por “¿encaja en un child PS?”.
 4. **Medir cuando sea perf.** Sin Lighthouse/network, el experto perf solo puede hablar de riesgos, no de victoria.
 5. **Sin conector de tienda.** No leemos stock ni pedidos. El código y el front son la fuente.
 6. **Sin MCP de terceros.** Si un día el experto perf lanza Lighthouse, es un binario local, no un bus ajeno.
@@ -149,14 +151,14 @@ No hace falta `mallard commerce`. No hay subcomando nuevo. `mallard update` enla
 ### Fase 0 — Los dos expertos vacíos pero útiles
 
 - `claude/agents/ecommerce-ux-expert.md` y `ecommerce-perf-expert.md` (mismo frontmatter que `layout-builder`).
-- KBs mínimas: las 5 superficies UX de arriba + `cwv.md` + `how-to-measure.md`. Oficio vuestro en **En este stack**, no un dump de blogs ni de Hydrogen.
+- KBs mínimas: las 5 superficies UX de arriba + `cwv.md` + `how-to-measure.md`. Oficio de tienda en las guidelines; **En este stack** solo cuando el CWD lo exige.
 - `/ux`, `/perf`.
 - `task-classifier`: tipos `ux` y `perf` + señales (“conversión”, “checkout”, “LCP”, “lento”).
 - Cero Go nuevo. Cero adapter.
 
 ### Fase 1 — Que se peleen con proyectos reales
 
-- Un ticket de checkout y uno de home lenta en un cliente PS (Panda o ElementFlow).
+- Un ticket de checkout y uno de home lenta en un storefront real (el que esté abierto).
 - El experto UX debe **delegar** el CSS a `layout-builder`.
 - Añadir a la KB solo lo que hayáis tenido que decidir de verdad.
 
@@ -172,7 +174,7 @@ Sigue valiendo el routing, no la ceremonia:
 - Delegate: “no convierten en checkout” → experto UX, luego worker.
 - El classifier no ejecuta (como `task-classifier` hoy).
 
-No hay recibo de precios ni `apply`. El “gate” de siempre: el experto **draft**, tú revisas en Lando, no deploya.
+No hay recibo de precios ni `apply`. El “gate” de siempre: el experto **draft**, tú revisas en local, no deploya.
 
 ## Línea apartada (ops)
 
@@ -184,31 +186,35 @@ Notas y fuentes de esa línea (mercado, adapters, gentle-ai RDD) se pueden recup
 
 ## Cotilleo GitHub (agosto 2026)
 
-El molde “skill/agente experto” ya existe. El combo **UX de tienda + perf de tienda + CWD PrestaShop/Panda + worker que maqueta** no.
+Filtro: **oficio de tienda genérico** (PDP, cart, checkout, search, CWV de storefront). No “¿sirve para un child PS?”.
 
-### Lo más parecido a `ecommerce-ux-expert`
+El molde “skill/agente experto” ya existe. El combo **UX de storefront + perf de storefront + diagnostica y no maqueta** casi no.
 
-| Repo | Stars | Qué es | Por qué no lo copiamos |
-|------|------:|--------|------------------------|
-| [dnh33/webshop-ux-expert](https://github.com/dnh33/webshop-ux-expert) | 0 | Plugin Claude: consultor de webshop, KB Baymard/Amazon, audita URL con Playwright | 0 stars, mezcla agentic-commerce y un scout de joyería DK. Idea sí: consultor ≠ implementador |
-| [hmtkyn/hydrogen-ecommerce-ux](https://github.com/hmtkyn/hydrogen-ecommerce-ux) | 2 | Skill Claude: PDP/cart/checkout/search + notas Hydrogen. Estructura de KB casi idéntica a la nuestra | Atado a Shopify Hydrogen. Cotillear carpetas, no el runtime |
-| [nexscope-ai/eCommerce-Skills](https://github.com/nexscope-ai/eCommerce-Skills) | ~700 | 157 skills de *seller* (Amazon, Shopify, PPC, checkout genérico) | Marketing/ops de marketplace, no criterio sobre un child theme |
-| [Seance1723/UXCraft](https://github.com/Seance1723/UXCraft) | 0 | UX general con capítulo ecommerce | Demasiado amplio; no es oficio de tienda |
-| [PrestaShop/skills](https://github.com/PrestaShop/skills) | 5 | Skills oficiales: update, check, rollback | Ops de tienda, cero UX/perf |
+### Lo más parecido a `ecommerce-ux-expert` (oficio de tienda)
+
+| Repo | Stars | Qué es | Por qué no lo copiamos entero |
+|------|------:|--------|-------------------------------|
+| [hmtkyn/hydrogen-ecommerce-ux](https://github.com/hmtkyn/hydrogen-ecommerce-ux) | 2 | KB por superficie de compra (home/nav/PLP, PDP, cart+checkout, search, mobile) + notas Hydrogen | El mapa de superficies **es** el oficio genérico. El runtime Hydrogen no |
+| [dnh33/webshop-ux-expert](https://github.com/dnh33/webshop-ux-expert) | 0 | Consultor de webshop, KB Baymard, audita URL con Playwright | 0 stars, mezcla agentic-commerce. Idea sí: consultor ≠ implementador |
+| [lgboim/ux-builder](https://github.com/lgboim/ux-builder) | 2 | 500+ reglas Baymard/NN/g; `references/ecommerce.md` = checkout/cart/PDP/search | Checklist genérico de producto, no CWD. Números de lift dudosos |
+| [mardab96/ecommerce-claude-skills](https://github.com/mardab96/ecommerce-claude-skills) | 3 | Pack **agnóstico de plataforma**: Checkout Friction Finder + Product Page Conversion Review (screenshots/URLs). No muta la tienda | El resto (ads, margen, LTV, feeds) es ops de merchant. Shape de 1 y 2: sí |
+| [finsilabs/awesome-ecommerce-skills](https://github.com/finsilabs/awesome-ecommerce-skills) | 45 | 178 skills Shopify/Woo/BC/Magento/headless. Storefront & UI (PDP, facetas, search, mega-menu) + checkout-flow-optimization | Setup de admin/apps (“instala Rebuy”). No diagnostica el CWD. Mapa de temas útil |
+| [nexscope-ai/eCommerce-Skills](https://github.com/nexscope-ai/eCommerce-Skills) | ~700 | 157 skills de *seller* (Amazon, PPC, checkout genérico) | Marketplace/ops, no criterio sobre un storefront |
+| [40RTY-ai/shopify-admin-skills](https://github.com/40RTY-ai/shopify-admin-skills) | 177 | `conversion-optimization` = informes de admin (abandonment, discounts) | Ops Shopify, no UX de ficha/checkout |
 
 ### Lo más parecido a `ecommerce-perf-expert`
 
 | Repo | Stars | Qué es | Encaje |
 |------|------:|--------|--------|
-| [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | ~2.6k | Skills Lighthouse / CWV / a11y / SEO (web genérico) | **El de cotillear para perf.** No sabe de sliders `st*` ni peso de cart PS |
-| [mohitkale/web-vitals-auditor](https://github.com/mohitkale/web-vitals-auditor) | 0 | Plugin: Lighthouse + bundle/images/fonts, subagentes | Buen patrón “medir en local”. No es ecommerce |
-| [ualiyou/web-performance-audit](https://github.com/ualiyou/web-performance-audit), [EVEDensity/web-perf-audit](https://github.com/EVEDensity/web-perf-audit) | bajos | Auditores CWV genéricos | Misma familia; no storefront |
+| [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | ~2.6k | Skills Lighthouse / CWV / a11y / SEO (web genérico) | **El de cotillear para perf.** No sabe de peso de cart/checkout |
+| [finsilabs](https://github.com/finsilabs/awesome-ecommerce-skills) `infrastructure-performance` | 45 | CDN de imágenes, cache, edge, load test | Infra de tienda, no LCP de una PDP |
+| Auditores CWV sueltos (`web-vitals-auditor`, etc.) | bajos | Lighthouse genérico | Misma familia; no storefront |
 
 ### Qué no hay
 
-Nadie junta: experto UX que **no** maqueta + experto perf que **exige** Lighthouse + classifier que ya habla con `layout-builder` / `panda-expert` / `prestashop-expert` + KB que crece con clientes PS.
+Nadie junta, con estrellas: experto UX de **superficies de compra** que **no** maqueta + experto perf que **exige** medir + classifier que ya habla con un worker de layout.
 
-Cotillear en serio esas dos: abajo, [qué extraemos](#qué-extraemos-de-las-dos). Las estrellas de verdad viven en **categorías adyacentes**, no en este combo: [reinvestigación high-star](#reinvestigación-high-star).
+Cotillear en serio Hydrogen y Addy: [qué extraemos](#qué-extraemos-de-las-dos). High-star y genéricos: [reinvestigación high-star](#reinvestigación-high-star).
 
 ## Qué extraemos de las dos
 
@@ -224,14 +230,14 @@ Leídas enteras (SKILL + references). No se vendoriza el repo; se copia el *meca
    ### Offer guest checkout; never require account creation
    **Source:** Baymard (top-3 abandonment)
    **Why it matters:** una frase
-   **En este stack:** Panda / ElementFlow / `templates/checkout` …
+   **En este stack:** Dawn / Flatsome / Panda / el checkout del CWD …
    ```
 
-   Su campo `Hydrogen implementation` lo sustituimos por notas al `panda-kb` / `elementflow-kb`. El experto UX no reescribe cómo funciona Easy Builder.
+   Su campo `Hydrogen implementation` lo sustituimos por **En este stack** (Dawn, Flatsome, Panda, Liquid, Smarty…). El experto UX no reescribe cómo funciona el builder de turno.
 4. **Citar el porqué.** “Baymard: guest checkout” > “sé más usable”.
 5. **No inventar porcentajes.** Lo dicen ellos; varios números del propio repo huelen a blog. Nosotros: umbrales Google (CWV) sí; lifts Baymard premium no.
 6. **High stakes.** Checkout, pago, a11y: el experto lo marca; no lo diluye en un checklist de home.
-7. **PS invierte su nota de checkout.** Hydrogen *no* posee el pago (`cart.checkoutUrl`). PrestaShop/Panda/ElementFlow **sí**. Por eso el experto UX aquí vale más que en Hydrogen: el child theme *es* el checkout.
+7. **Checkout propio vs hosted.** Hydrogen *no* posee el pago (`cart.checkoutUrl` → Shopify Checkout). Woo, Magento, PS, BigCommerce theme y muchos custom **sí**. El experto UX tiene que preguntar si el checkout es editable en este CWD (mardab lo hace igual). Donde sí lo es, vale más: el theme *es* el checkout.
 
 ### Hydrogen UX — qué no
 
@@ -244,18 +250,18 @@ Leídas enteras (SKILL + references). No se vendoriza el repo; se copia el *meca
 
 1. **Un experto, varias lentes.** Ellos instalan 6 skills (audit / performance / cwv / a11y / seo / best-practices). Nosotros no. `ecommerce-perf-expert` carga `cwv.md` o `images.md` según el trigger, igual que el UX carga una superficie. `web-quality-audit` ≈ nuestro classifier cuando el ticket es “la web va mal” sin más.
 2. **CWV no es otra persona.** Es un reference (`LCP.md` / nuestro `cwv.md`) con tabla Good / Needs work / Poor (umbrales Google, 75º percentil).
-3. **Presupuesto en tabla**, luego retocado a storefront (pixels, sliders `st*`, reviews). Forma de Addy; números nuestros cuando midamos.
+3. **Presupuesto en tabla**, luego retocado a storefront (pixels, sliders, reviews, tag managers). Forma de Addy; números nuestros cuando midamos.
 4. **Severidad: Critical / High / Medium / Low.** Prioridad: fallo CWV y barrera a11y antes que estilo. El output del experto perf es una lista rankeada, no un ensayo.
 5. **SKILL.md < 500 líneas; references cargables solos.** Progressive disclosure. Hydrogen peca de files de 200+ líneas; Addy pide ~200. Nosotros: un tema por file, TOC arriba.
-6. **Medir fuera del contexto.** `scripts/analyze.sh`: logs en stderr, JSON en stdout. El experto perf no “cree” el LCP: corre Lighthouse en la URL Lando (o pide el JSON). Fase 0 puede ser “cómo medir”; el script puede esperar.
+6. **Medir fuera del contexto.** `scripts/analyze.sh`: logs en stderr, JSON en stdout. El experto perf no “cree” el LCP: corre Lighthouse en la URL local (o pide el JSON). Fase 0 puede ser “cómo medir”; el script puede esperar.
 7. **Bad / Good en perf.** Un `<img>` sin width/height vs con `width` `height` `fetchpriority`. Más útil que prosa. En UX el par es hallazgo en *este* tpl vs prescripción, no un snippet React.
-8. **Agnóstico primero.** Vanilla/HTML, luego nota de framework. Igual que nosotros: principio → Panda/EF.
+8. **Agnóstico primero.** Vanilla/HTML, luego nota de framework. Igual que nosotros: principio → **En este stack**.
 
 ### Addy — qué no
 
-- Early Hints, Speculation Rules, `getServerSideProps` como consejo por defecto en un child PS.
+- Early Hints, Speculation Rules, `getServerSideProps` como consejo por defecto en un theme clásico (Liquid, Smarty, PHP). En Hydrogen/Next sí pueden aplicar: **En este stack**.
 - Skill `best-practices` (CSP, HSTS) como experto de ecommerce. Eso no es conversión.
-- Grep de HTML estático como auditoría de una tienda Smarty/builder (su `analyze.sh` no entiende `.tpl`).
+- Grep de HTML estático como auditoría de un storefront con templates (`.liquid`, `.tpl`, `.phtml`).
 - Instalar las 6 skills en paralelo a Mallard: duplicarían al classifier.
 
 ### Encaje en Fase 0
@@ -272,82 +278,96 @@ Leídas enteras (SKILL + references). No se vendoriza el repo; se copia el *meca
 | Tipo de página primero (Corey) | ya lo cubre el router de superficies |
 | Quick Wins / High-Impact / Test Ideas (Corey) | capa extra sobre Critical/High/Medium/Low: fácil vs caro vs hipótesis |
 | Heurísticas + dark patterns (Wondelai) | lentes en checkout/móvil; no un skill Nielsen aparte |
-| Métricas antes de grep (Vercel Optimize) | el experto perf no barre el child hasta tener Lighthouse/JSON |
+| Métricas antes de grep (Vercel Optimize) | el experto perf no barre el repo hasta tener Lighthouse/JSON |
+| Evidence vs hypothesis (mardab) | si no hay screenshot/URL/dato, se marca hipótesis |
+| Mapa de temas Finsi (PDP, facetas, checkout) | confirma las 5 superficies; no 178 skills de admin |
 
 ## Reinvestigación high-star
 
-Agosto 2026. No hay un repo de muchas estrellas que sea “experto UX de tienda + experto perf de storefront + CWD PrestaShop”. Las estrellas están al lado.
+Agosto 2026. Filtro corregido: **ecommerce genérico** (PDP, cart, checkout, search, LCP de storefront), no “¿encaja en PrestaShop?”.
 
-### Dónde están las estrellas
+No hay un repo de muchas estrellas que sea ese oficio como dos expertos diagnose-and-delegate. Las estrellas grandes son UI genérica, CRO de landing SaaS, índices y herramientas. El oficio de *tienda* vive en repos medianos/chicos.
 
-| Stars | Repo | Qué es de verdad | Encaje Mallard |
-|------:|------|------------------|----------------|
-| 170k | [anthropics/skills](https://github.com/anthropics/skills) | Formato oficial. `frontend-design` = identidad visual (no CRO de checkout). `webapp-testing` = tests | El molde SKILL.md. No copiar `frontend-design`: chocaría con el oficio UX |
-| 73k | [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) | Índice | Ruido |
-| 44.5k | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) | **El CRO con más estrellas.** `skills/cro/` es landing/SaaS: headline, CTA, pricing, forms. “Purchase” aparece; PDP/cart/checkout PS no | Forma de salida + “identifica el tipo de página”. No las 11 skills hermanas (copywriting, popups, ab-testing) |
-| 31k | [GoogleChrome/lighthouse](https://github.com/GoogleChrome/lighthouse) | La herramienta de medición | El experto perf la **invoca** (URL Lando). No es un agente |
-| 30k | [VoltAgent/awesome-agent-skills](https://github.com/VoltAgent/awesome-agent-skills) | Índice | Ruido |
-| 30k | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `web-design-guidelines` (fetch reglas, `file:line`). `vercel-optimize` = métricas primero, luego código. `react-best-practices` = React | Doctrina “no grep hasta tener señales”. Demasiado Vercel/Next para el child PS |
-| 95k | [microsoft/playwright](https://github.com/microsoft/playwright) | Browser automation | Auditoría live como `webshop-ux-expert`: opcional, no Fase 0 |
-| 8.6k | [GoogleChrome/web-vitals](https://github.com/GoogleChrome/web-vitals) | Lib JS de field metrics | Campo, no lab. Lighthouse local sigue siendo Fase 0 |
-| 7.0k | [GoogleChrome/lighthouse-ci](https://github.com/GoogleChrome/lighthouse-ci) | Gate CI | Más tarde, si hay pipeline |
-| 2.6k | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | Pack de skills CWV/Lighthouse | Sigue siendo el **mejor pack high-star de perf**. Ya extraído arriba |
-| 1.9k | [wondelai/skills](https://github.com/wondelai/skills) | 50 skills de libros. `ux-heuristics` (Krug + Nielsen, severidad 0–4, trunk test, dark patterns, 44px). `cro-methodology` (CRE: investigar antes de tips, objeciones O/CO, ICE) | Lentes y ética. No 50 frameworks de libro ni un score 10/10 |
-| 699 | [nexscope-ai/eCommerce-Skills](https://github.com/nexscope-ai/eCommerce-Skills) | Dump Amazon/seller | Ya descartado |
-| 208 | [medusajs/medusa-agent-skills](https://github.com/medusajs/medusa-agent-skills) | Convenciones Medusa | Plataforma ajena |
-| 43 | [kgelster/awesome-ecom-skills](https://github.com/kgelster/awesome-ecom-skills) | Juicio de **catálogo** Shopify (metafields, alt, redirects). Mutar tienda live | Línea ops, no criterio de front. Preview-before-mutate es de esa línea, no de UX/perf |
+### Dónde están las estrellas (adyacente, no tienda)
 
-Búsqueda `topic:agent-skills ecommerce`: el techo es nexscope (699). Nadie con miles de estrellas hace el oficio de ficha/checkout/LCP sobre un theme.
+| Stars | Repo | Qué es de verdad | Encaje |
+|------:|------|------------------|--------|
+| 170k | [anthropics/skills](https://github.com/anthropics/skills) | Formato oficial. `frontend-design` = identidad visual | Molde SKILL.md. **No** es CRO de checkout |
+| 117k | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | Design system / “taste” UI. Tiene página `checkout` como layout visual | No es conversión de tienda. Si alguien pide “que se vea menos plantilla”, no es `/ux` |
+| 73k / 30k | awesome-\* de skills | Índices | Ruido |
+| 44.5k | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) | **El CRO con más estrellas.** Landing/SaaS: headline, CTA, pricing, forms. Purchase aparece; PDP/cart/checkout de tienda no | Forma de salida + tipo de página. No el embudo signup→trial |
+| 31k / 95k / 8.6k | Lighthouse, Playwright, web-vitals | Herramientas | El experto las **invoca**. No son el experto |
+| 30k | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `vercel-optimize`: métricas antes de grep; `file:line` | Doctrina útil. Recetas Next/Vercel = **En este stack**, no el oficio |
+| 2.6k | [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | Pack CWV | Sigue siendo el mejor pack high-star de **perf web**. No de cart/checkout |
+| 1.9k | [wondelai/skills](https://github.com/wondelai/skills) | Heurísticas + CRE | Lentes. No 50 libros |
+
+### Oficio de tienda (genérico). Pocas estrellas, este es el cotilleo
+
+| Stars | Repo | Oficio | Qué robamos | Qué no |
+|------:|------|--------|-------------|--------|
+| 45 | [finsilabs/awesome-ecommerce-skills](https://github.com/finsilabs/awesome-ecommerce-skills) | 178 skills multi-plataforma (Shopify/Woo/BC/Magento/headless). Storefront & UI + checkout-flow-optimization | Mapa de temas: PDP, facetas, search, mega-menu, responsive, checkout. Guest, costes tarde, express pay, trust junto al pago | “Instala Rebuy / Checkout X / CartFlows”. Eso es ops de merchant, no CWD |
+| 177 | [40RTY-ai/shopify-admin-skills](https://github.com/40RTY-ai/shopify-admin-skills) | Informes de admin (abandonment, discounts) | — | Ops. No UX de ficha |
+| 86 | [Weaverse/shopify-hydrogen-skills](https://github.com/Weaverse/shopify-hydrogen-skills) | Cómo construir Hydrogen | — | Implementación de plataforma |
+| 3 | [mardab96/ecommerce-claude-skills](https://github.com/mardab96/ecommerce-claude-skills) | **El shape más cercano.** Agnóstico: screenshots/URLs, no muta la tienda. Checkout Friction Finder + Product Page Conversion Review | Evidence vs hypothesis; preguntar si el checkout es editable; ranked friction; no prometer lift | Skills 3–20 (ads, margen, LTV, feeds) son otra línea |
+| 2 | [hmtkyn/hydrogen-ecommerce-ux](https://github.com/hmtkyn/hydrogen-ecommerce-ux) | Superficies de compra + Hydrogen | El mapa. Ya extraído | Runtime Shopify |
+| 2 | [lgboim/ux-builder](https://github.com/lgboim/ux-builder) | Baymard/NN/g en `ecommerce.md` | Confirma checkout/cart/PDP/search como dominio | Lifts tipo “+28%”; no CWD |
+| 699 | nexscope eCommerce-Skills | Amazon/seller | — | No storefront |
+| 0 | [dnh33/webshop-ux-expert](https://github.com/dnh33/webshop-ux-expert) | Consultor webshop + Playwright | Consultor ≠ implementador | 0 stars, UCP mezclado |
+
+`topic:agent-skills ecommerce`: el techo con estrellas es seller/ops (nexscope 699, 40RTY 177). El techo de **criterio de storefront** es Finsi 45, y el shape que queremos es mardab/Hydrogen (2–3★).
 
 ### Qué sirve (sin vendorizar)
 
-**Corey `cro` (44.5k del parent)**
+**Finsi storefront + checkout (45★, genérico de verdad)**
 
-1. **Tipo de página primero.** Homepage vs pricing vs form. Nosotros: superficie de compra (PDP, cart, checkout…). El router Hydrogen ya lo cubre; Corey lo confirma como hábito del CRO con más stars.
-2. **Salida en tres cubos:** Quick Wins / High-Impact / Test Ideas. Encaja con Critical/High/Medium/Low: Quick Win = hallazgo grave y barato; Test Idea = hipótesis, no prescripción. No inventar lifts.
-3. **No su embudo SaaS** (landing → signup → trial → paid). Una tienda PS no es una pricing page.
-4. **No instalar el pack marketing.** Cross-links a signup/popups/copywriting/ab-testing hincharían el classifier.
+1. Plataformas en tabla: Shopify (checkout a menudo **hosted**), Woo/BC/custom (**editable**). El experto pregunta el control, no asume PS ni Hydrogen.
+2. Temas de Storefront & UI que ya teníamos: PDP, facetas, search autocomplete, mega-menu, responsive. Quick-view / 360 / wishlist = extra, no Fase 0.
+3. Checklist de checkout público: guest, campos de más, shipping cost tarde, express above the form, trust junto al pago, validate on blur.
+4. **No** el modo “recomienda la app del marketplace”.
 
-**Wondelai `ux-heuristics` + `cro-methodology` (1.9k)**
+**mardab (3★, agnóstico)**
 
-1. **No adivinar: investigar.** CRE lo dice igual que nosotros “nada de % inventados”. El experto UX cita el tpl y una fuente; si no hay dato, marca opinión.
-2. **Objeciones en checkout** (confianza, precio, esfuerzo). Útil junto a Baymard; no un skill de copy.
-3. **Dark patterns** (roach motel, hover-only, hijack del back). High stakes en pago/guest.
-4. **44px tap targets** y trunk test (“¿dónde estoy?”) en `mobile.md` / nav. Nielsen 10 como *lente*, no como el experto entero.
-5. **Severidad 0–4** (cosmetic → catastrophe) mapea a Critical/High/Medium/Low. Un solo scale; no dual.
-6. **No** el score 10/10 ni el plugin de 50 libros (`hooked-ux`, `lean-ux`, `refactoring-ui`…). Eso es otra productización.
+1. Input: URL, screenshot, políticas. No hace falta Admin API.
+2. Evidence tag + confidence. Sin dato → `hypothesis` / `needs_data`.
+3. “¿El checkout se puede editar o lo bloquea la plataforma?”
+4. Guardrail: no mutar, no prometer lift. Ya era nuestra regla.
 
-**Vercel `vercel-optimize` + `web-design-guidelines` (30k)**
+**Corey `cro` (44.5k)**
 
-1. **Métricas antes de grep.** “No inspecciones fuentes hasta que exista `signals.json`.” En Mallard: no barrer el child hasta Lighthouse (o el JSON) de la URL Lando. Confirma Addy.
-2. **Hallazgos `file:line`.** El experto cita `templates/checkout/...:N`, no “el checkout está mal”.
-3. **No** Fluid compute, Observability Plus, ISR, ni su pipeline de sub-agentes. Un child Smarty no es Next en Vercel.
+Tipo de página primero (nosotros: superficie de compra, no pricing SaaS). Salida Quick Wins / High-Impact / Test Ideas. No el embudo landing→signup→trial.
 
-**Anthropic `frontend-design` (170k del parent)**
+**Wondelai (1.9k)**
 
-Identidad visual distintiva (palette, type, “un riesgo estético”). **No** es el experto UX de conversión. Si alguien pide “que se vea menos plantilla”, eso no es `/ux`. No usar un nombre parecido.
+Investigar antes de tips; objeciones; dark patterns; 44px; un solo scale de severidad.
 
-**Lighthouse / Playwright / web-vitals**
+**Vercel Optimize (30k)**
 
-Herramientas. El experto perf las usa; Mallard no las reimplementa. Playwright live-audit puede llegar después; Fase 0 es criterio + cómo medir.
+Métricas antes de grep; `file:line`. Recetas Fluid/ISR/Observability = solo si el CWD es Vercel.
+
+**Addy (2.6k) + Lighthouse**
+
+CWV como lente. Medir fuera del prompt. Playwright live-audit: opcional.
 
 ### Qué no hacer con esto
 
-- Vendorizar `marketingskills` ni `wondelai/skills` enteros.
+- Filtrar repos por “¿esto habla de PrestaShop?”. El oficio no es de plataforma.
+- Vendorizar las 178 skills de Finsi ni el pack marketing de Corey.
 - Mezclar CRO de landing SaaS con superficies de tienda.
 - Un segundo experto “heurísticas” aparte del UX.
-- Copiar `vercel-optimize` (auth CLI, Observability Plus, frameworks que bloquean PS).
-- Tratar índices awesome-\* como producto.
+- Tratar índices awesome-\* o toolkits Magento/Woo/Hydrogen como el experto UX.
 
-High stars ≠ el producto. El mapa de superficies sigue siendo de Hydrogen (2★). El pack de medición, de Addy (2.6k). De los grandes: forma de salida (Corey), ética/heurísticas (Wondelai), métricas-antes-de-código (Vercel).
+High stars ≠ el producto. Oficio de tienda = Hydrogen (superficies) + mardab (diagnóstico sin mutar) + Finsi (mapa multi-plataforma). Medición = Addy. De los grandes: forma (Corey), ética (Wondelai), métricas-primero (Vercel).
 
 ## Fuentes de oficio (para las KBs, no como runtime)
 
-- Oficio vuestro de clientes (primera fuente).
+- Oficio de clientes / CWD (primera fuente).
 - [Baymard](https://baymard.com/) — checkout, mobile, search (criterio, no copiar papers enteros).
 - [web.dev / CWV](https://web.dev/explore/learn-core-web-vitals) — medición.
-- KBs ya en Mallard: `prestashop-kb`, `panda-kb`, `elementflow-kb` para el *cómo* en PS.
-- Estructura a mirar (no a vendorizar): [hydrogen-ecommerce-ux](https://github.com/hmtkyn/hydrogen-ecommerce-ux), [web-quality-skills](https://github.com/addyosmani/web-quality-skills).
+- Superficies: [hydrogen-ecommerce-ux](https://github.com/hmtkyn/hydrogen-ecommerce-ux).
+- Diagnóstico sin mutar: [mardab96/ecommerce-claude-skills](https://github.com/mardab96/ecommerce-claude-skills) (friction + PDP review).
+- Mapa multi-plataforma (no las apps): [finsilabs/awesome-ecommerce-skills](https://github.com/finsilabs/awesome-ecommerce-skills) storefront-ui + checkout-flow-optimization.
+- Medición: [web-quality-skills](https://github.com/addyosmani/web-quality-skills).
 - Forma de salida CRO (no el embudo SaaS): [marketingskills/skills/cro](https://github.com/coreyhaines31/marketingskills).
-- Heurísticas / objeciones (lentes, no el roster): [wondelai/skills](https://github.com/wondelai/skills) (`ux-heuristics`, `cro-methodology`).
-- Métricas antes de grep: doctrina de [vercel-optimize](https://github.com/vercel-labs/agent-skills/tree/main/skills/vercel-optimize), aplicada a Lighthouse local.
+- Heurísticas / objeciones: [wondelai/skills](https://github.com/wondelai/skills).
+- Métricas antes de grep: doctrina de [vercel-optimize](https://github.com/vercel-labs/agent-skills/tree/main/skills/vercel-optimize).
+- KBs de plataforma en Mallard (PS/Panda/EF, etc.) solo para el *cómo* cuando el CWD las pide.

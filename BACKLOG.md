@@ -14,7 +14,8 @@ deliberately out of scope).
 SDD workflow, Engram/persona injection, MCP server management, AI provider switcher /
 per-phase model assignment. These belong to a "configurator" product, not mallard.
 
-Commerce experts (see `docs/ecommerce-agent-team.md`) are the same shape as
-prestashop-expert / layout-builder: UX and performance KBs + agents + classifier
-types. Steal gentle-ai routing (inline vs delegate). Do not import SDD, Engram,
-GGA, persona, store adapters, or an ops/apply runtime.
+Commerce experts (see `docs/ecommerce-agent-team.md`) are storefront craft
+(UX/CRO + performance), same shape as prestashop-expert / layout-builder:
+KBs + agents + classifier types. Platform-agnostic oficio; stack notes only
+when the CWD needs them. Steal gentle-ai routing (inline vs delegate). Do not
+import SDD, Engram, GGA, persona, store adapters, or an ops/apply runtime.
