@@ -10,6 +10,8 @@ Un **equipo de expertos** en el mismo Claude/Cursor de siempre. No operan la tie
 
 El *cómo* en una plataforma concreta (Panda, Dawn, Flatsome, Hydrogen) no vive en estos expertos: vive en las KBs de plataforma que ya hay, o en una nota **En este stack**.
 
+La unidad portable es la **skill** (7 harnesses). El subagente es candado de herramientas y contexto, y hoy Mallard solo lo entrega a Claude y Cursor. Detalle: [Harnesses y Mallard](#harnesses-y-mallard-agosto-2026).
+
 Hoy el hueco se ve así:
 
 | Pregunta | Quién la coge hoy | Qué falta |
@@ -75,8 +77,8 @@ Orquestación = el `task-classifier` que ya existe, ampliado. No un “Ecommerce
 
 | Agente | Oficio | Mira | No hace |
 |--------|--------|------|---------|
-| `ecommerce-ux-expert` | Conversión y oficio de tienda: checkout, PDP, PLP, cart, búsqueda, confianza, móvil, merchandising visual | Templates, CSS, builder, flujos reales del CWD | No maqueta él (delega a `layout-builder`). No instala apps ni toca catálogo/pedidos |
-| `ecommerce-perf-expert` | Velocidad que afecta a venta: LCP/INP/CLS, imágenes, JS/CSS budget, third-parties, peso de cart/checkout | Assets, sliders, fuentes, requests, URL local | No “optimiza” a ciegas. Prescribe + cómo medir |
+| `ecommerce-ux-expert` | Conversión y oficio de tienda: checkout, PDP, PLP, cart, búsqueda, confianza, móvil, merchandising visual | Templates, CSS, builder, flujos reales del CWD | No maqueta (sin Edit/Write en el subagente; en skill, instrucción). No instala apps ni toca catálogo/pedidos |
+| `ecommerce-perf-expert` | Velocidad que afecta a venta: LCP/INP/CLS, imágenes, JS/CSS budget, third-parties, peso de cart/checkout | Assets, sliders, fuentes, requests, URL local | No “optimiza” a ciegas. Prescribe + cómo medir. Bash para Lighthouse, no para reescribir el theme |
 | `task-classifier` | Tipos nuevos: `ux`, `perf` | Título / notas / módulo | Sigue sin hacer el trabajo |
 
 Cada experto es CWD-first, como los otros: primero el proyecto, luego la KB.
@@ -127,15 +129,26 @@ Reglas de la KB:
 - Checkout/pago/a11y = “high stakes”: se dice claro, sin % inventado.
 - Un hallazgo repetido en dos clientes → se documenta.
 
-## Cómo se usa (comandos)
+## Cómo se usa (por harness)
+
+Mallard no es solo Claude. Lo que el usuario *teclea* cambia:
+
+| Qué quieres | Claude Code | Cursor | OpenCode | Codex / Gemini / Windsurf |
+|-------------|-------------|--------|----------|---------------------------|
+| Oficio UX/perf | skill se autoinvoca **y** subagente | skill (`/` + nombre) **y** subagente en `~/.cursor/agents` | skill tool + `/ux` si hay command | **solo la skill** (description = router) |
+| Invocar a mano | `/ux` `/perf` (command → subagente o skill) | `/ecommerce-ux` si la skill se llama así; no hay `CommandsDir` | `/ux` (command). Hoy Mallard **no** enlaza agents de OpenCode | `$ecommerce-ux-kb` (Codex) o descripción |
+| `/task` → tipo ux/perf | sí (`task-classifier`) | no hay `/task` (command Claude/OpenCode) | sí el command, no el subagente classifier | no |
+
+Consecuencia: **la KB skill es el experto en 7 de 7 harnesses.** El fichero `claude/agents/*.md` es lujo de aislamiento (Claude + Cursor hoy). Si el oficio vive solo en el agente, Codex no lo ve.
+
+Nombres (mismo molde que `panda-kb` / `panda-expert` / `/panda`):
 
 ```
-/ux          → ecommerce-ux-expert
-/perf        → ecommerce-perf-expert
-/task        → classifier; ahora puede devolver TYPE: ux | perf
+skills/ecommerce-ux-kb/      +  claude/agents/ecommerce-ux-expert.md  +  /ux
+skills/ecommerce-perf-kb/    +  claude/agents/ecommerce-perf-expert.md +  /perf
 ```
 
-No hace falta `mallard commerce`. No hay subcomando nuevo. `mallard update` enlaza agentes y skills, como siempre.
+No hace falta `mallard commerce`. `mallard update` enlaza. Cero Go para Fase 0.
 
 ## Principios
 
@@ -144,35 +157,160 @@ No hace falta `mallard commerce`. No hay subcomando nuevo. `mallard update` enla
 3. **Agnóstico de plataforma en el oficio, concreto en el cómo.** El agente UX no se llama `ps-ux-expert` ni `shopify-ux-expert`. La investigación tampoco se filtra por “¿encaja en un child PS?”.
 4. **Medir cuando sea perf.** Sin Lighthouse/network, el experto perf solo puede hablar de riesgos, no de victoria.
 5. **Sin conector de tienda.** No leemos stock ni pedidos. El código y el front son la fuente.
-6. **Sin MCP de terceros.** Si un día el experto perf lanza Lighthouse, es un binario local, no un bus ajeno.
+6. **Sin MCP de terceros.** Si un día el experto perf lanza Lighthouse, es un binario local (`scripts/` de la skill), no un bus ajeno.
+7. **La skill es el producto; el agente es el candado.** Oficio y references viven en `skills/`. El agente es fino: CWD-first, carga la KB, formato de salida, sin Edit/Write (UX) o con Bash para medir (perf). Si duplicamos el oficio en el `.md` del agente, Codex/Gemini se quedan fuera.
+
+## Harnesses y Mallard (agosto 2026)
+
+Investigación de cómo cada runtime carga skills / commands / agents, contra lo que Mallard **realmente** enlaza. Esto cambia Fase 0.
+
+### Qué enlaza Mallard hoy
+
+Código: `internal/agents/*.go`. `mallard update` hace symlink desde el repo.
+
+| Adapter | Detect | Skills | Commands (`/foo`) | Agents (subagente) |
+|---------|--------|--------|-------------------|-------------------|
+| Claude Code | `~/.claude` o `claude` en PATH | `~/.claude/skills` y `<ws>/.claude/skills` | sí | sí |
+| Cursor | `~/.cursor` | `~/.cursor/skills` | **vacío** | sí (`~/.cursor/agents`) |
+| OpenCode | `~/.config/opencode` o `opencode` | `~/.config/opencode/skills` | sí | **vacío** (el producto ya los tiene) |
+| Codex | `~/.codex` o `codex` | `~/.codex/skills` | vacío | vacío |
+| Gemini CLI | `~/.gemini` o `gemini` | `~/.gemini/skills` | vacío | vacío |
+| Windsurf | `~/.codeium/windsurf` | `~/.codeium/windsurf/skills` | vacío | vacío |
+| Generic | `~/.agents` | `~/.agents/skills` | vacío | vacío |
+
+`docs/adding-skills.md` dice “agents = Claude only”. Eso **ya es falso**: Cursor recibe agents. OpenCode documenta `~/.config/opencode/agents/*.md` y Mallard no los toca.
+
+### El estándar (agentskills.io)
+
+Una skill es un directorio con `SKILL.md` (frontmatter `name` + `description`) + `references/` + `scripts/` + `assets/`. Divulgación progresiva:
+
+1. Al arrancar: solo `name` + `description` (~100 tokens) de **todas** las skills.
+2. Al activar: el body del `SKILL.md` (recomendado < 500 líneas / < 5k tokens).
+3. A demanda: `references/` y `scripts/`.
+
+Eso **es** el diseño de `panda-kb` y el que ya copiamos de Hydrogen/Addy. No es un detalle de Claude.
+
+`description` máx 1024 caracteres y tiene que decir **qué** y **cuándo**. En Codex/Gemini/Windsurf esa frase **es el classifier**. Si no menciona checkout, PDP, LCP, conversión, Shopify, Woo, Magento, Hydrogen, el experto no salta. `panda-expert` dice explícitamente que **no** se dispare en Shopify/Woo: el hueco lo tiene que ocupar esta description.
+
+Campo `compatibility`: para perf, más adelante `Requires Lighthouse or npx lighthouse`. No en Fase 0.
+
+`allowed-tools` es experimental y no lo usan todos. El candado real de “UX no edita CSS” es el subagente sin Write, no la skill.
+
+### Tres primitivas (no son tamaños distintos)
+
+Regla de Anthropic / Cursor, útil aquí:
+
+| Primitiva | Quién la dispara | Dónde corre | Para Mallard UX/perf |
+|-----------|------------------|-------------|----------------------|
+| **Skill** | El modelo, por `description` (o `/nombre` en Cursor) | Hilo actual | El oficio + KB. Portable. |
+| **Command** | Tú, `/ux` | Hilo actual (o lanza subagente) | Atajo. Claude + OpenCode. |
+| **Subagente** | El modelo o el command | **Otro** contexto; devuelve el resultado | Aislar el audit (mucho Grep/Lighthouse) y **quitar Edit**. Claude + Cursor hoy. |
+
+Un subagente no es “una skill más gorda”. Es otra habitación. Cursor lo dice igual: changelog → skill; research ruidoso → subagente.
+
+UX/perf **sí** merecen subagente donde exista: el audit ensucia el hilo (templates, network, JSON de Lighthouse) y el UX **no debe** tener Write. En Codex no hay habitación: la skill corre inline y el “no edites CSS” es instrucción.
+
+### Claude Code
+
+Skills en `~/.claude/skills`. Commands en `~/.claude/commands`. Subagentes en `~/.claude/agents` (Task tool).
+
+Deuda actual: `/panda` y `/ps` invocan `prestashop-experts:panda-expert` (namespace de **plugin**). Los agentes del repo usan `${CLAUDE_PLUGIN_ROOT}/skills/...`. Mallard **también** symlinkea esos mismos `.md` a `~/.claude/agents`. Doble distribución (plugin freelance + Mallard equipo).
+
+**Los expertos nuevos no usan namespace de plugin ni `CLAUDE_PLUGIN_ROOT`.** Cargan `ecommerce-ux-kb` como skill Mallard (`~/.claude/skills/ecommerce-ux-kb` tras `mallard update`). Si un día salen en el plugin, se adapta; no al revés.
+
+`/ux` no debe ser un one-liner “Invoke the plugin subagent”. Cuerpo:
+
+```
+Carga la skill ecommerce-ux-kb y síguela.
+Si existe el subagente ecommerce-ux-expert, delega (contexto aislado, sin Edit).
+No edites CSS; prescribe y pasa a layout-builder.
+```
+
+Así el command no se rompe el día que no hay plugin.
+
+### Cursor (2026)
+
+Skills: `.cursor/skills`, `~/.cursor/skills`, y por compat `.claude/skills`, `.codex/skills`, `.agents/skills`. Slash `/skill-name` **es** la skill. Commands clásicos (`.cursor/commands`) se migran a skills con `disable-model-invocation: true`. Mallard no enlaza commands a Cursor: **correcto**, si la skill tiene buen nombre.
+
+Subagentes: `~/.cursor/agents` y compat `~/.claude/agents`. Mallard ya enlaza agents a Cursor. El `.md` estilo Claude (frontmatter `name`, `description`, `tools`) le vale.
+
+Gotcha: `mallard install --all` deja la misma skill en `~/.cursor/skills` **y** Cursor también lee `~/.claude/skills`. Puede listar duplicados. No lo resolvemos en este plan; no instalar de más o aceptar el dup.
+
+Para `/ux` en Cursor: o la skill se llama `ux` (corto, chocará) o el usuario escribe `/ecommerce-ux-kb`. Preferible **no** inventar un alias `ux` skill. El command `/ux` es Claude/OpenCode; en Cursor el disparo es descripción + subagente.
+
+### Codex
+
+Oficio oficial: skills. USER path documentado: `$HOME/.agents/skills`. Repo: `.agents/skills` walking-up. Mallard enlaza `~/.codex/skills` (sigue existiendo) **y**, si detecta `~/.agents`, el adapter generic también. Codex invoca con `$nombre` o por description. Prompts/commands van a skills.
+
+No hay subagentes Codex en el adapter. Cursor docs mencionan `.codex/agents` como compat; no es el producto Codex CLI. **No diseñamos agentes Codex.**
+
+`agents/openai.yaml` (UI, `allow_implicit_invocation`) es extensión OpenAI, no el spec. No lo necesitamos.
+
+### OpenCode
+
+Skills: nativo `skill({ name })`. Lee `.opencode/skills`, `~/.config/opencode/skills`, **y** `.claude/skills` / `.agents/skills`. Commands: `~/.config/opencode/commands` — Mallard sí los enlaza.
+
+**Agents (2026):** markdown en `~/.config/opencode/agents/` con `mode: subagent` y `permission: edit: deny`. Es el candado que queremos para UX. Mallard **`AgentsDir` está vacío.** Hueco del CLI, no de los expertos.
+
+Fase 0 de expertos: commands `/ux` `/perf` que cargan la **skill** (OpenCode tiene `skill` tool). No esperar al adapter.
+
+Más adelante (otro PR, Go): `opencodeAdapter.AgentsDir() = ~/.config/opencode/agents` + workspace `.opencode/agents`. El formato no es el de Claude (`tools: Read, Grep` vs `permission: edit: deny`). Traducir 1:1 es mentira; o un template OpenCode al lado, o un generador. No mezclar frontmatters.
+
+Command OpenCode puede poner `agent: ecommerce-ux-expert` + `subtask: true` **cuando** el agent exista. Hasta entonces, el body carga la skill.
+
+### Gemini CLI y Windsurf
+
+Solo skills. Gemini: `~/.gemini/skills`. Windsurf: skills bajo `~/.codeium/windsurf/skills`. Mallard **no** mapea workflows `.windsurf/workflows` (formato distinto). Correcto: no son el experto.
+
+### Generic `~/.agents`
+
+Path “universal” que Codex y Cursor también miran. Mallard lo rellena si existe `~/.agents`. Bien para el experto-skill.
+
+### Implicaciones (lo que cambia el diseño)
+
+1. **Fase 0 skill-first.** Dos KBs con `description` de disparo, no dos agentes gordos.
+2. **Agentes finos**, `tools: Read, Grep, Glob, Bash` **sin** Edit/Write en UX. Perf puede Bash (Lighthouse). `layout-builder` sigue con Write.
+3. **Commands duales** (skill, y subagente si existe). Cero `prestashop-experts:`.
+4. **`/task` + classifier** es extra de Claude/OpenCode, no el router universal.
+5. **Script Lighthouse** en `ecommerce-perf-kb/scripts/` (spec), no en el prompt.
+6. **No Go** para nacer. Go solo si un día queremos agents OpenCode.
+7. **Handshake UX → layout-builder:** el entregable del experto es una lista de cambios (archivo, qué, por qué) para que el worker no re-diagnostique. Eso es routing gentle-ai (`delegate_only`) en la práctica.
+8. **No** `/storefront-audit` paralelo UX+perf en Fase 0. Claude/Cursor pueden spawnear los dos subagentes después, si se usa.
 
 ## Fases
 
-### Fase 0 — Los dos expertos vacíos pero útiles
+### Fase 0 — Skills portables + agentes finos
 
-- `claude/agents/ecommerce-ux-expert.md` y `ecommerce-perf-expert.md` (mismo frontmatter que `layout-builder`).
-- KBs mínimas: las 5 superficies UX de arriba + `cwv.md` + `how-to-measure.md`. Oficio de tienda en las guidelines; **En este stack** solo cuando el CWD lo exige.
-- `/ux`, `/perf`.
-- `task-classifier`: tipos `ux` y `perf` + señales (“conversión”, “checkout”, “LCP”, “lento”).
-- Cero Go nuevo. Cero adapter.
+Orden: KB primero (7 harnesses), agente después (Claude/Cursor), command dual, classifier.
+
+- `skills/ecommerce-ux-kb/` y `skills/ecommerce-perf-kb/` con `SKILL.md` router y `description` que dispare en **cualquier** storefront (checkout, PDP, cart, LCP, conversión, Shopify, Woo, Magento, Hydrogen — el hueco que `panda-expert` rechaza).
+- References mínimas: 5 superficies UX + `cwv.md` + `how-to-measure.md`. Oficio en las guidelines; **En este stack** solo si el CWD lo pide.
+- `references/output-format.md` compartido de hecho: Critical/High/Medium/Low + evidencia vs hipótesis (mardab) + Quick Wins / High-Impact / Test Ideas (Corey). UX añade bloque **Implementación → layout-builder** (archivos, qué, no el CSS).
+- Agentes finos: `claude/agents/ecommerce-ux-expert.md` y `ecommerce-perf-expert.md`. CWD-first, “carga la KB”, formato de salida. UX: `tools: Read, Grep, Glob, Bash` — **sin Edit/Write**. Perf: + Bash para medir. No copiar la KB al body del agente.
+- `/ux` y `/perf`: “carga la skill; si hay subagente, delega”. Sin namespace de plugin.
+- `task-classifier`: tipos `ux` y `perf` + señales. Solo ayuda a `/task`.
+- Cero Go. Cero adapter OpenCode. Cero script Lighthouse todavía (el `how-to-measure.md` dice cómo; `scripts/` en Fase 1 si duele).
 
 ### Fase 1 — Que se peleen con proyectos reales
 
-- Un ticket de checkout y uno de home lenta en un storefront real (el que esté abierto).
-- El experto UX debe **delegar** el CSS a `layout-builder`.
+- Un ticket de checkout y uno de home lenta en un storefront real (el que esté abierto), en **más de un harness** si podéis (Claude + Cursor o Codex). Si solo funciona en Claude, la skill está mal y el oficio está en el agente.
+- El experto UX debe **delegar** el CSS a `layout-builder` (o no tocar archivos).
 - Añadir a la KB solo lo que hayáis tenido que decidir de verdad.
+- Si medir a mano cansa: `ecommerce-perf-kb/scripts/` que deje JSON en stdout (Addy).
 
-### Fase 2 — SEO y a11y, si el núcleo se usa
+### Fase 2 — Solo si el núcleo se usa
 
-- Mismo molde. No antes: si UX/perf no se invocan, no hace falta más roster.
+- SEO y a11y, mismo molde skill-first.
+- Opcional, **otro** trabajo: `opencodeAdapter.AgentsDir` + template `permission: edit: deny` (no es este crew).
+- Opcional: command `/storefront-audit` que lance UX y perf en paralelo (Claude/Cursor).
 
 ## Encaje con gentle-ai (sin SDD)
 
 Sigue valiendo el routing, no la ceremonia:
 
-- Inline: “el logo pisa el buscador” → `layout-builder`.
-- Delegate: “no convierten en checkout” → experto UX, luego worker.
-- El classifier no ejecuta (como `task-classifier` hoy).
+- Inline: “el logo pisa el buscador” → `layout-builder` (skill/agente con Write).
+- Delegate: “no convierten en checkout” → experto UX **sin Write**, luego worker. En Claude/Cursor eso es subagente; en Codex es la misma skill con la regla escrita.
+- El classifier no ejecuta (como `task-classifier` hoy). En harnesses sin `/task`, la `description` de la skill hace de classifier.
 
 No hay recibo de precios ni `apply`. El “gate” de siempre: el experto **draft**, tú revisas en local, no deploya.
 
@@ -371,3 +509,11 @@ High stars ≠ el producto. Oficio de tienda = Hydrogen (superficies) + mardab (
 - Heurísticas / objeciones: [wondelai/skills](https://github.com/wondelai/skills).
 - Métricas antes de grep: doctrina de [vercel-optimize](https://github.com/vercel-labs/agent-skills/tree/main/skills/vercel-optimize).
 - KBs de plataforma en Mallard (PS/Panda/EF, etc.) solo para el *cómo* cuando el CWD las pide.
+
+Harnesses (para el plan de empaquetado, no para las KBs):
+
+- [Agent Skills spec](https://agentskills.io/specification) — `SKILL.md`, progressive disclosure, `description` ≤ 1024.
+- [Cursor Skills](https://cursor.com/docs/skills) y [Subagents](https://cursor.com/docs/subagents) — slash = skill; agents en `~/.cursor/agents`.
+- [Codex skills](https://developers.openai.com/codex/skills) — `$HOME/.agents/skills`, invocación `$`.
+- [OpenCode skills](https://opencode.ai/docs/skills) y [agents](https://opencode.ai/docs/agents) — `permission: edit: deny`; Mallard aún no enlaza agents.
+- Mallard adapters: `internal/agents/*.go`. `docs/adding-skills.md` está desfasado (dice agents = Claude only).

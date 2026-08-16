@@ -16,6 +16,8 @@ per-phase model assignment. These belong to a "configurator" product, not mallar
 
 Commerce experts (see `docs/ecommerce-agent-team.md`) are storefront craft
 (UX/CRO + performance), same shape as prestashop-expert / layout-builder:
-KBs + agents + classifier types. Platform-agnostic oficio; stack notes only
-when the CWD needs them. Steal gentle-ai routing (inline vs delegate). Do not
-import SDD, Engram, GGA, persona, store adapters, or an ops/apply runtime.
+KBs + agents + classifier types. Skill-first (portable across harnesses);
+thin read-only subagents on Claude/Cursor. Platform-agnostic oficio; stack
+notes only when the CWD needs them. Steal gentle-ai routing (inline vs
+delegate). Do not import SDD, Engram, GGA, persona, store adapters, or an
+ops/apply runtime. OpenCode AgentsDir is a separate CLI follow-up.
