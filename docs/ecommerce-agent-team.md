@@ -180,9 +180,38 @@ Si un día hace falta, es otro namespace y otro momento. No mezclarlo con estos 
 
 Notas y fuentes de esa línea (mercado, adapters, gentle-ai RDD) se pueden recuperar del historial de git de este doc si hicieran falta.
 
+## Cotilleo GitHub (agosto 2026)
+
+El molde “skill/agente experto” ya existe. El combo **UX de tienda + perf de tienda + CWD PrestaShop/Panda + worker que maqueta** no.
+
+### Lo más parecido a `ecommerce-ux-expert`
+
+| Repo | Stars | Qué es | Por qué no lo copiamos |
+|------|------:|--------|------------------------|
+| [dnh33/webshop-ux-expert](https://github.com/dnh33/webshop-ux-expert) | 0 | Plugin Claude: consultor de webshop, KB Baymard/Amazon, audita URL con Playwright | 0 stars, mezcla agentic-commerce y un scout de joyería DK. Idea sí: consultor ≠ implementador |
+| [hmtkyn/hydrogen-ecommerce-ux](https://github.com/hmtkyn/hydrogen-ecommerce-ux) | 2 | Skill Claude: PDP/cart/checkout/search + notas Hydrogen. Estructura de KB casi idéntica a la nuestra | Atado a Shopify Hydrogen. Cotillear carpetas, no el runtime |
+| [nexscope-ai/eCommerce-Skills](https://github.com/nexscope-ai/eCommerce-Skills) | ~700 | 157 skills de *seller* (Amazon, Shopify, PPC, checkout genérico) | Marketing/ops de marketplace, no criterio sobre un child theme |
+| [Seance1723/UXCraft](https://github.com/Seance1723/UXCraft) | 0 | UX general con capítulo ecommerce | Demasiado amplio; no es oficio de tienda |
+| [PrestaShop/skills](https://github.com/PrestaShop/skills) | 5 | Skills oficiales: update, check, rollback | Ops de tienda, cero UX/perf |
+
+### Lo más parecido a `ecommerce-perf-expert`
+
+| Repo | Stars | Qué es | Encaje |
+|------|------:|--------|--------|
+| [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) | ~2.6k | Skills Lighthouse / CWV / a11y / SEO (web genérico) | **El de cotillear para perf.** No sabe de sliders `st*` ni peso de cart PS |
+| [mohitkale/web-vitals-auditor](https://github.com/mohitkale/web-vitals-auditor) | 0 | Plugin: Lighthouse + bundle/images/fonts, subagentes | Buen patrón “medir en local”. No es ecommerce |
+| [ualiyou/web-performance-audit](https://github.com/ualiyou/web-performance-audit), [EVEDensity/web-perf-audit](https://github.com/EVEDensity/web-perf-audit) | bajos | Auditores CWV genéricos | Misma familia; no storefront |
+
+### Qué no hay
+
+Nadie junta: experto UX que **no** maqueta + experto perf que **exige** Lighthouse + classifier que ya habla con `layout-builder` / `panda-expert` / `prestashop-expert` + KB que crece con clientes PS.
+
+Cotillear en serio: la estructura de carpetas de Hydrogen UX y el split de skills de Addy. El resto es ruido o otro oficio (seller).
+
 ## Fuentes de oficio (para las KBs, no como runtime)
 
 - Oficio vuestro de clientes (primera fuente).
 - [Baymard](https://baymard.com/) — checkout, mobile, search (criterio, no copiar papers enteros).
 - [web.dev / CWV](https://web.dev/explore/learn-core-web-vitals) — medición.
 - KBs ya en Mallard: `prestashop-kb`, `panda-kb`, `elementflow-kb` para el *cómo* en PS.
+- Estructura a mirar (no a vendorizar): [hydrogen-ecommerce-ux](https://github.com/hmtkyn/hydrogen-ecommerce-ux), [web-quality-skills](https://github.com/addyosmani/web-quality-skills).
