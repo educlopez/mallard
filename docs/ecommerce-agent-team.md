@@ -4,6 +4,89 @@ Producto **nuestro**, dentro de Mallard: un **ecosistema de ops comercial** (cre
 
 Mallard no se convierte en un ERP. Se queda en lo que ya es —y en lo que era gentle-ai—: **configura el crew y se quita de en medio**. El Go que sí escribimos es la capa de autoridad (contrato, capabilities, recibo, `apply`), no el analista.
 
+## Qué estás montando (el resultado)
+
+No es un dashboard, ni un chatbot en la tienda, ni un n8n, ni un segundo CLI. Es **el mismo gesto que `/task`**, pero para operar una tienda.
+
+Hoy: abres Claude/Cursor, `/task 41953`, Mallard clasifica y te deja listo para traducir / layout / regen. La tienda no entra.
+
+El día que esto exista: abres Claude/Cursor, `/briefing acme` (o “¿puedo vender el SKU 12?”), un crew lee la tienda por **nuestro** conector y te devuelve un markdown +, si toca dinero, una propuesta que **tú** aplicas. El back-office de PS/Shopify sigue existiendo. Esto no lo sustituye; te ahorra el tour de pestañas del lunes y el viernes.
+
+### Lo que ves (Fase 1, read-only)
+
+Una vez: `mallard update` (como ahora) y un `store.yaml` por cliente (URL + API key + techos).
+
+```
+# ~/.mallard/stores/acme/store.yaml
+id: acme
+adapter: prestashop          # o shopify | woo | http | fake
+endpoint: https://acme.test
+auth: env:ACME_WS_KEY
+policies:
+  readOnly: true
+  unpaidDays: 14
+```
+
+Lunes, en el chat (no en un panel nuevo):
+
+```
+tú:     /briefing acme
+Mallard: [orquestador reparte → analyst + inventory + merchandiser]
+
+        Briefing acme · 11–17 ago
+        Ventas 12.4k €  AOV 68 €  (−4% vs semana ant.)
+        Top: CHAQUETA-02, BOLSO-11
+        Se acaba: BOLSO-11 talla M (3 ud, 4 días de stock)
+        Roto: 6 productos activos no comprables (sin foto o stock 0)
+        Pedidos: 4 impagos >14 días — ver /order-triage
+
+        Nada se ha escrito en la tienda.
+```
+
+Viernes: `/order-triage acme` → cola rankeada (impago, CS, reembolso).  
+Antes de una campaña: `/catalog-audit acme` → checklist (fotos, comprable, promos vivas).
+
+Pregunta chica (“¿el SKU 12 se puede comprar?”) no monta el crew entero: una lectura, una respuesta.
+
+### Lo que ves después (Fase 2–3, con tu OK)
+
+```
+tú:     baja un 10% CHAQUETA-02 esta semana
+Mallard: propuesta p-184
+         price 89.00 → 80.10  margen 41% (≥ 35%)  dto 10% (≤ 15%)
+         apply?   mallard commerce apply p-184
+```
+
+Hasta que no corres `apply` (o confirmas en el chat, que acaba llamando a lo mismo), la tienda no cambia. Queda un recibo en `audit.jsonl`: qué se leyó, qué se escribió, quién aprobó.
+
+### Qué hay en el repo (las piezas)
+
+| Pieza | Dónde | Para qué la tocas tú |
+|-------|-------|----------------------|
+| Playbooks + roles | `skills/commerce-kb/`, `claude/agents/commerce-*.md`, `/briefing` | Como `task-classifier` y `/task`: el agente sabe qué hacer |
+| Contrato + recibo + `apply` | `internal/commerce` | Para que un LLM no pueda “decir” que bajó el precio sin un gate |
+| Conector de tienda | `internal/commerce/adapter/…` | Un archivo por plataforma. El de PS habla webservice **nuestro** |
+| Estado por cliente | `~/.mallard/stores/<id>/` | yaml, propuestas, audit. No va al git de Mallard |
+
+Eso es todo el producto. Tres superficies, una sola: el chat que ya usas.
+
+### Qué no es (para que no se mezcle)
+
+| No es | Porque |
+|-------|--------|
+| Un back-office nuevo | Sigues publicando fichas y pedidos donde ya lo haces |
+| Un agente de venta al cliente (chat de la web) | Otro riesgo, otro canal. Fuera de v1 |
+| Un motor que “optimiza ventas solo” | No hay repricing 24/7 ni lifts prometidos |
+| Un SaaS ni un MCP de PrestaShop/Shopify | El conector es código nuestro; Claude es el mismo de siempre |
+| Un segundo producto que instalar | `mallard update` y ya están los comandos |
+
+### Analogía corta
+
+`/task` = “entiende este ticket y enruta el trabajo de **código**”.  
+`/briefing` = “entiende esta **tienda** y enruta el trabajo de **ops**”.
+
+El resultado final, en una frase: **los lunes y viernes de una tienda caben en el mismo Claude donde ya desarrollas**, con datos reales y sin que la IA escriba precios a solas.
+
 ## Decisión (esta iteración)
 
 - **No** dependemos del MCP Server de PrestaShop, MCP Tools Plus, Shopify MCP/UCP, Busony, VTEX, Agentforce, CrewAI Cloud, n8n ni ningún bus de terceros.
