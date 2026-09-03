@@ -8,7 +8,7 @@ description: >
   "prepara en local", "levanta el lando de X", "configura X en local", "actualízame
   la DB", "refresca la DB de X", "bájame la DB de X", "sync DB", or "quiero la DB
   actualizada de X".
-version: "0.3.0"
+version: "0.4.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -431,6 +431,33 @@ server {
     location ~* \.(bak|sql|log|twig)$ { deny all; }
     location ~* ^/(upload|img)/.*\.php[0-9]?$ { deny all; }
 
+    # Legacy AdminController pretty-URL POST target: HelperForm-based module
+    # config screens ("Guardar") post back to a RELATIVE "index.php" under
+    # whatever pretty admin path is currently showing (e.g.
+    # /adminXXX/improve/modules/manage/action/configure/index.php) — not a
+    # real file; only works on classic Apache/.htaccess setups where every
+    # request under the admin dir rewrites to the real index.php. Without
+    # this rule the location below ("non-index PHP files") matches first
+    # (it does end in .php) and passes the fake nested path as
+    # SCRIPT_FILENAME, producing PHP-FPM's literal "File not found." — this
+    # rule MUST come first, and its fastcgi_param overrides MUST come AFTER
+    # "include fastcgi_params" (that file sets its own SCRIPT_FILENAME from
+    # $document_root$fastcgi_script_name, and a later same-key fastcgi_param
+    # wins — declaring the override before the include gets silently
+    # reverted to the broken value).
+    location ~* ^/admin[-_\w]*/(.+/)?index\.php(/|$) {
+        fastcgi_pass $fpm_upstream;
+        fastcgi_buffers 32 32k;
+        fastcgi_buffer_size 32k;
+        fastcgi_index index.php;
+        fastcgi_read_timeout 300;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/{admin-dir}/index.php;
+        fastcgi_param SCRIPT_NAME /{admin-dir}/index.php;
+        fastcgi_param PATH_INFO '';
+        fastcgi_param DOCUMENT_ROOT $document_root;
+    }
+
     # Admin: non-index PHP files (filemanager/dialog.php, etc.)
     location ~* ^/admin[-_\w]*/(?!index\.php).+\.php(/|$) {
         fastcgi_pass $fpm_upstream;
@@ -777,6 +804,30 @@ Causa: `fastcgi_pass appserver:9000` (o cualquier hostname literal). El alias
 y nginx además cachea la IP al arrancar (resolución estática). Doble fallo:
 puede resolver al contenedor equivocado, o quedarse con una IP stale tras un
 restart.
+
+### Troubleshooting — editar `.lando/nginx-site.conf` y el cambio "no se aplica"
+
+En el recipe `lemp` (imagen bitnami), `.lando/nginx-site.conf` se **copia** a
+`/opt/bitnami/nginx/conf/vhosts/lando.conf` al arrancar el contenedor — NO es
+un bind-mount ni un `include` en vivo del fichero fuente. Editar el fichero y
+lanzar `lando restart` puede parecer que funciona (sin errores) pero nginx
+sigue sirviendo la copia vieja hasta el próximo recreate completo del
+contenedor.
+
+Para aplicar un cambio de nginx al momento sin esperar un `lando restart`
+completo:
+```bash
+lando ssh -s appserver_nginx -u root -c "cp /app/.lando/nginx-site.conf /opt/bitnami/nginx/conf/vhosts/lando.conf && nginx -s reload"
+```
+`-u root` es obligatorio — como `www-data` falla con `Permission denied` al
+tocar el pidfile. Da un par de segundos (`sleep 2-3`) antes de volver a
+probar con curl: el reload no es instantáneo y un test inmediato puede pillar
+la generación de workers a medias (parece un bug de caché intermitente y no
+lo es).
+
+Para depurar si un edit realmente llegó al proceso nginx activo:
+`lando ssh -s appserver_nginx -u root -c "nginx -T"` vuelca la config
+efectiva ya parseada — más fiable que comparar ficheros a mano.
 
 Fix: el patrón `resolver 127.0.0.11` + `set $fpm_upstream fpm:9000` +
 `fastcgi_pass $fpm_upstream` que ya incluye la plantilla de
