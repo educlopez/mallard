@@ -7,7 +7,7 @@ description: >
   (ps-css-build, ps-project-doc, lando-setup). Does NOT create the GitLab repo,
   the server, or install PrestaShop core. Use when starting a new client
   project locally and you need the standard scaffold fast.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -29,7 +29,7 @@ Every project gets a child theme, on **both** tracks — you never edit the pare
 
 This skill's generated EF skeleton (below) is a **fallback/starting point** only. When the store already has the `stsitebuilder` module, tell the user to grab the official child instead, and warn: on PS 1.7/8 a hand-generated child will not carry the store's image types — re-add them or use the BO download. Consult the `elementflow-kb` skill for builder specifics (navigation items, terms modal `terms-and-conditions-modal.tpl`, one-column mobile checkout).
 
-The CSS build for both tracks is the **same** lightningcss pipeline `ps-css-build` ships (bundle+minify `_dev/css/custom.css` → `assets/css/custom.css`, chokidar watch, zero-dep pre-commit fallback), so one build system serves both.
+The CSS build for both tracks is the **same** lightningcss pipeline `ps-css-build` ships (bundle+minify `_dev/css/custom.css` → `assets/css/custom.css`, zero-dep Node watch, zero-dep pre-commit fallback), so one build system serves both.
 
 ## Flow
 
