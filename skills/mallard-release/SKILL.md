@@ -6,14 +6,14 @@ description: >
   skill or command to mallard, bump a mallard version, "publicar mallard", "subir
   mallard", "nueva versión de mallard", or anything involving editing this repo
   and getting the change to the team's machines.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
 
 # mallard release workflow
 
-Reference for adding/updating skills, commands, and shipping releases for [mallard](https://github.com/educlopez/mallard). The tool lives at `/Users/eduardocalvolopez/Developer/Personal/mallard` (on Eduardo's machine).
+Reference for adding/updating skills, commands, and shipping releases for [mallard](https://github.com/educlopez/mallard). The tool lives in your local clone of that repo. The path differs per machine, so resolve it instead of assuming one: `dirname "$(dirname "$(readlink ~/.claude/skills/mallard-release)")"` prints the repo root, because every mallard-managed skill is a symlink into `<repo>/skills/<name>`. Run the commands below from that directory.
 
 ## When to use this skill
 
