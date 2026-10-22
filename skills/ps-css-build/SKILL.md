@@ -10,7 +10,7 @@ description: >
   multiple @import'ed CSS partials loaded at runtime, when the user mentions
   manual CSS version bumps, CSS cache busting problems, "el CSS no se
   actualiza", or wants the Milagros-style CSS build on another project.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -35,6 +35,7 @@ themes/{child}/
 │       ├── utilities.css
 │       └── pages/*.css
 ├── scripts/bundle-css.js    # fallback cero-deps para el hook
+├── scripts/watch.js         # rebuild al guardar (lo lanza node --watch-path)
 ├── assets/css/custom.css    # GENERADO — único CSS servido
 ├── package.json             # pnpm + scripts css/watch
 ├── pnpm-workspace.yaml      # supply-chain hardening
@@ -77,16 +78,27 @@ Limpiar el entry point `_dev/css/custom.css`:
   "packageManager": "pnpm@11.1.2",
   "scripts": {
     "css": "lightningcss --bundle --minify --targets 'defaults' _dev/css/custom.css -o assets/css/custom.css",
-    "watch": "chokidar '_dev/css/**/*.css' -c 'pnpm run --silent css' --initial"
+    "watch": "node --watch-path=_dev/css --watch-preserve-output scripts/watch.js"
   },
   "devDependencies": {
-    "chokidar-cli": "^3.0.0",
     "lightningcss-cli": "^1.30.2"
   }
 }
 ```
 
 Pin de versión pnpm **exacta** (la instalada: `pnpm --version`), no `11.x.x`.
+
+`themes/{child}/scripts/watch.js` (el watcher, sin dependencias; Node ≥ 18.11):
+
+```js
+// Rebuild the CSS bundle on every change under _dev/css (run via `node --watch-path`).
+const { execSync } = require('child_process');
+execSync('pnpm run --silent css', { stdio: 'inherit' });
+```
+
+**No uses `chokidar-cli`**: arrastra `braces` ≤3.0.3 (high, GHSA-vfj7-8cjw-p6xm) sin
+versión parcheada publicada, y el job `dependency-audit-node` de CI falla.
+`lightningcss-cli` no tiene `--watch`, por eso el watcher es Node nativo.
 
 `themes/{child}/pnpm-workspace.yaml` (ver skills `supply-chain-security` y
 `gitlab-security-setup` para el detalle):
@@ -129,7 +141,7 @@ Mientras se edita CSS, el watcher debe estar corriendo en una terminal:
 pnpm --dir themes/{child} run watch
 ```
 
-- Guardas un parcial en `_dev/css/` → chokidar dispara lightningcss → dist
+- Guardas un parcial en `_dev/css/` → `node --watch-path` dispara lightningcss → dist
   regenerado en ~10ms → recarga del browser y listo.
 - `--initial` hace un build al arrancar, así que el dist nunca queda stale
   al empezar la sesión.
@@ -138,7 +150,7 @@ pnpm --dir themes/{child} run watch
   "cambié el CSS y no sale" → watch no estaba corriendo → build puntual:
   `pnpm --dir themes/{child} run css`.
 - Combina con la skill `ps-watch` (BrowserSync) para recarga automática del
-  browser además del rebuild: chokidar regenera el dist y BrowserSync detecta
+  browser además del rebuild: el watcher regenera el dist y BrowserSync detecta
   el cambio en `assets/css/` y recarga. Watch + BrowserSync = guardar y ver.
 
 ## Paso 3 — Limpiar el tpl
