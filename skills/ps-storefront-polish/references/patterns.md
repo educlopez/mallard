@@ -17,6 +17,7 @@ commit is the quickest way to see a pattern whole: `git show <hash> --stat`.
 | Product page rebuild, sticky ATC | CSS "Product page", JS "Mobile sticky add-to-cart bar" | bb0edfbd |
 | Product tiles with variant dots | CSS "Product tile" | e8299e70 |
 | Login and sign-up pages | CSS "Login page", `templates/customer/...` | fdaed924 |
+| Slim checkout footer | `templates/_partials/footer.tpl` (`page_name == 'checkout'`) | 519a69ee |
 | View transitions | see skill `ps-view-transitions` | cc7517d4 |
 | Size guides module | `modules/...` plus theme integration | 2246fc5f |
 

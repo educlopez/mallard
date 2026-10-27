@@ -12,7 +12,7 @@ description: >
   hace zoom en iOS", "focus", fonts and type scale, or wants the same details as
   Pies Sanos on another project. For page and filter transitions use
   ps-view-transitions; for the native one-page checkout use ps-one-page-checkout.
-version: "0.1.1"
+version: "0.2.0"
 ---
 
 # PrestaShop storefront polish
@@ -57,6 +57,7 @@ Hummingbird details. If a companion is not installed on the machine, skip it.
 | Inputs, labels, focus, autofill | `emil-forms-and-inputs` | Hummingbird overrides, checkout autocomplete, birthday mask (`forms.md`) |
 | What to animate and how | `find-animation-opportunities`, `improve-animations`, `emil-animations` | the snippets that shipped and the rejected list (`motion.md`) |
 | Type scale, font files, wrap, figures | `emil-typography` | role tokens, variable woff2, preload, base block (`typography.md`) |
+| Review of the whole storefront | `emil-ui-review` | the audits, cascade and overflow traps, slim checkout footer (`ui-review.md`) |
 | Fine details (z-index, focus, scrollbars) | `emil-ui-polish` | the z-index scale and overlay fixes (`header-layers.md`) |
 | Page, facet and tile transitions | `ps-view-transitions` | nothing, use it as is |
 | Native one-page checkout | `ps-one-page-checkout` | only the checkout styling and autofill |
@@ -88,6 +89,8 @@ ids, and do not copy drawers or the mini cart unless asked.
 When a project teaches something new, add it to `references/<theme>.md`, and move
 it into the shared files only when it held on a second theme.
 
+The skill grew from three passes on one shop: color, surfaces, forms, typography, motion, then a review. Expect to add a `references/<theme>.md` on the next project.
+
 ## Order of work in a new theme
 
 1. Tokens first (`references/tokens-surfaces.md`). Every later rule reads them.
@@ -97,7 +100,8 @@ it into the shared files only when it held on a second theme.
    (filters, size guide, category text, mini cart) reuses it.
 5. Typography (`references/typography.md`): font files and the role scale.
 6. Motion (`references/motion.md`) as a last pass, on frequent actions only.
-7. Page-level patterns as needed (`references/patterns.md`).
+7. Review (`references/ui-review.md`): audit every page, verify, then fix.
+8. Page-level patterns as needed (`references/patterns.md`).
 
 ## Rules that paid off
 
@@ -118,6 +122,8 @@ it into the shared files only when it held on a second theme.
 
 - **No `;` inside a CSS comment** in the theme stylesheet: the theme minifier
   swallows the next rule. Use commas or a full stop.
+- **`!important` inside a cascade layer beats `!important` outside it** (order reverses). Change the utility's variable, or write from the same layer (`ui-review.md`).
+- **Overflow is invisible on a mobile viewport**: Chrome widens the layout viewport. Compare against the emulated width, not `innerWidth` (`ui-review.md`).
 - **Browser keeps the old compiled CSS** under the same hashed name: force it with
   `fetch(url,{cache:'reload'})` and check a new token before measuring (`typography.md`).
 - **Compiled asset cache**: after editing `custom.css` or `custom.js`, delete
