@@ -204,6 +204,65 @@ html.pies-drawer-lock .whatsapp,body.pies-mm-open .whatsapp,body:has(.offcanvas.
 })();
 ```
 
+## Component contract in a server-rendered theme
+
+Component-design principles (composition, variants, naming, escape hatches,
+controlled and uncontrolled state: see `emil-component-design`) are written for
+React. Their server-rendered equivalents here:
+
+| Principle | In a Smarty and vanilla-JS theme |
+|---|---|
+| Composition over configuration | One shell partial plus slots passed as HTML (`body`, `footer`, built with `{capture}` when needed), not a config array |
+| Variants and size | A modifier class (`pies-drawer--right`/`--left`) and tokens. Size comes from `--pies-drawer-width` per instance |
+| Escape hatch | CSS custom properties and an extra `class` param, never inline styles |
+| `asChild` | Any element can open a drawer through `data-pies-drawer-open="#id"` (a link keeps working without JS, the JS only enhances it) |
+| Controlled and uncontrolled | Declarative `data-*` attributes plus the imperative `PiesDrawer.open/close/isOpen` and the `pies:drawer:*` events |
+| Platform names and defaults | `aria-*`, `role="dialog"`, `type="button"` on every `<button>`, `aria-controls` and `aria-expanded` on openers |
+| Extract at 2 to 3 copies | The drawer header and close button were pasted in 4 templates before `components/drawer.tpl` existed. The stepper has 2 copies (one is module markup) and stays as is |
+
+Partial (`templates/components/drawer.tpl`, put it next to the theme's other
+`components/` templates; Hummingbird already has that folder):
+
+```smarty
+<aside class="pies-drawer pies-drawer--{$side|default:'right'}{if !empty($class)} {$class}{/if}" id="{$id}" data-pies="{$data_pies|default:$id}" data-pies-drawer aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="{$id}-title" tabindex="-1">
+  <div class="pies-drawer__header">
+    <p class="pies-drawer__title" id="{$id}-title">{$title|default:''}</p>
+    <button type="button" class="pies-drawer__close btn-close" data-pies-drawer-close{if !empty($autofocus)} data-pies-drawer-autofocus{/if} aria-label="{l s='Close' d='Shop.Theme.Global'}"></button>
+  </div>
+  {if !empty($bare)}
+    {$body|default:'' nofilter}
+  {else}
+    <div class="pies-drawer__body{if !empty($body_class)} {$body_class}{/if}"{if !empty($body_attrs)} {$body_attrs nofilter}{/if}>{$body|default:'' nofilter}</div>
+  {/if}
+  {if !empty($footer)}
+    <div class="pies-drawer__footer">{$footer nofilter}</div>
+  {/if}
+</aside>
+```
+
+Usage:
+
+```smarty
+{include file='components/drawer.tpl' id='size-guide-drawer' title=$size_guide.title body=$size_guide.content body_class='size-guide'}
+{include file='components/drawer.tpl' id='category-description-drawer' title=$category.name body_class='rich-text' body_attrs='data-pies-fill-from="#category-description"'}
+{capture name='slot'}<div data-pies-cart-slot></div>{/capture}
+{include file='components/drawer.tpl' id='pies-cart-drawer' data_pies='cart-drawer' class='pies-cart-drawer' title='Tu carrito' autofocus=true bare=true body=$smarty.capture.slot}
+```
+
+How it was verified: the rendered DOM of each shell was compared with the
+hand-written markup it replaced (identical apart from the title ids), then each
+drawer was opened, checked for focus inside, and closed with the button and Esc.
+
+Naming and coupling rules:
+
+- `data-pies="x"` is a hook for JS and tests. `data-pies-<component>-<role>` carries behaviour.
+- Nothing may reference the title ids: they are generated as `{id}-title`.
+- The drawer is self-contained. The mini cart is NOT: its JS depends on the cart
+  module's markup (`.ps-shoppingcart`, `template.js-pies-cart-tpl`, `.pies-mini-line`
+  with `data-id-product`) and on fixed ids (`#pies-cart-drawer`). Copy that recipe
+  as a whole slice (template, JS, CSS), never piece by piece.
+- Stock module markup that already ships its own wrapper (the facets offcanvas) stays outside the partial.
+
 ## Adapting
 
 - Rename `pies-` and `data-pies-` consistently. The z tokens come from the scale in `header-layers.md`.
