@@ -12,7 +12,7 @@ description: >
   hace zoom en iOS", "focus", fonts and type scale, or wants the same details as
   Pies Sanos on another project. For page and filter transitions use
   ps-view-transitions; for the native one-page checkout use ps-one-page-checkout.
-version: "0.1.0"
+version: "0.1.1"
 ---
 
 # PrestaShop storefront polish
