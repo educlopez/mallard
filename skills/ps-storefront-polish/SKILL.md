@@ -12,11 +12,11 @@ description: >
   when polishing or starting a storefront, when the user says "pulir diseno",
   "design tokens", "z-index" ("el menu se abre debajo del carrito"), "el input
   hace zoom en iOS", "focus", fonts and type scale, "animacion de like / corazon
-  de wishlist / lottie", "scrollbars", "scroll area", "toasts", "modales de
+  de wishlist / lottie", "scrollbars", "scroll area", "toasts", "fluid hover" (a highlight that glides between items), "modales de
   wishlist", "replica esto de otra web / como en <web>" (reverse engineer a
   reference with rea), or wants the same details as Pies Sanos on another project. For page and filter transitions use
   ps-view-transitions; for the native one-page checkout use ps-one-page-checkout.
-version: "0.4.0"
+version: "0.5.0"
 ---
 
 # PrestaShop storefront polish
@@ -65,6 +65,7 @@ Hummingbird details. If a companion is not installed on the machine, skip it.
 | Fine details (z-index, focus, scrollbars) | `emil-ui-polish` | the z-index scale and overlay fixes (`header-layers.md`) |
 | Lottie like on the wishlist heart, recolour, lazy load | `emil-animations`, `emil-performance` | the whole recipe, licence rules and the Vue `characterData` trap (`lottie-like.md`) |
 | Scrollbars, scroll areas, edge fades | `emil-ui-polish` | the three-tier recipe after fluidfunctionalism (`scrollbars.md`) |
+| Hover highlight that glides between items | `emil-animations` | the nearest-item component, axes y/x/xy, traps (`fluid-hover.md`) |
 | Toasts, module modals (blockwishlist) | `emil-animations`, `emil-surfaces` | Sonner port, mirroring module toasts, one dialog language (`toasts-modals.md`) |
 | Copying a detail from another website | `reverse-engineer-anything` | the rea method for storefront details, licence rules, the x.com 403 and logged-in Chrome traps (`replicate-from-web.md`) |
 | Page, facet and tile transitions | `ps-view-transitions` | nothing, use it as is |
@@ -114,6 +115,7 @@ The skill grew from three passes on one shop: color, surfaces, forms, typography
    (`references/scrollbars.md`), toasts and module modals
    (`references/toasts-modals.md`), the Lottie wishlist like
    (`references/lottie-like.md`, recolour with `scripts/lottie_recolor.py`).
+   Hover that glides between menu items or cards: `references/fluid-hover.md`.
    When the user points at another site ("como en X"), study it first with rea
    (`references/replicate-from-web.md`).
 
