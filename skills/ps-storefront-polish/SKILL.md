@@ -16,7 +16,7 @@ description: >
   wishlist", "replica esto de otra web / como en <web>" (reverse engineer a
   reference with rea), or wants the same details as Pies Sanos on another project. For page and filter transitions use
   ps-view-transitions; for the native one-page checkout use ps-one-page-checkout.
-version: "0.5.0"
+version: "0.6.0"
 ---
 
 # PrestaShop storefront polish
@@ -116,6 +116,8 @@ The skill grew from three passes on one shop: color, surfaces, forms, typography
    (`references/toasts-modals.md`), the Lottie wishlist like
    (`references/lottie-like.md`, recolour with `scripts/lottie_recolor.py`).
    Hover that glides between menu items or cards: `references/fluid-hover.md`.
+   Store on the ElementFlow builder (`stsitebuilder`): selectors, traps, translations and
+   compiled-template rebuilds in `references/elementflow.md`.
    When the user points at another site ("como en X"), study it first with rea
    (`references/replicate-from-web.md`).
 
