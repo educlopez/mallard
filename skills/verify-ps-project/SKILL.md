@@ -8,7 +8,7 @@ description: >
   local", "prueba el checkout", "demuestra que funciona", "haz una pasada de
   verificación", "revisa que el mapa de features sigue vigente", or before
   declaring done a theme, module or checkout change.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -31,6 +31,7 @@ Write everything for an agent that reads it cold: real selectors and URLs from t
 - Right URL: the shop does not redirect to the production domain (`/ps-url` if it does).
 - Right theme: the active child theme is the one under test.
 - Port and containers are ours: never drive an instance you did not start or confirm.
+- Child theme CSS is built: the compiled file (usually `themes/<child>/assets/css/custom.css`) exists and is not empty. A 404 or 0-byte file here means the CSS build was never run (`ps-css-build`).
 
 ## 3. Drive
 
@@ -44,11 +45,13 @@ Cover the flows a customer touches, in order. Prefer stable handles (`data-*`, i
 | Cart | Line appears, quantity change updates totals |
 | Checkout | Reaches each step; demo user via `/ps-customer` or `ps-demo-user`; stop before real payment |
 
+After clicking "Añadir al carrito", wait until the cart counter changes (or the modal appears) before navigating: the add is AJAX, and navigating early leaves an empty cart that looks like a failure.
+
 Side effects count: check the cart row, order record or email in Mailhog alongside what is visible. No test-only endpoints.
 
 ## 4. Evidence
 
-Save to `.verify/evidence/<YYYY-MM-DD-HHMM>/` in the project: one screenshot per step plus `console.txt` with errors. Keep `.verify/` out of git via `.git/info/exclude`, not the shared `.gitignore`. Report one line per flow: pass, fail or not driven, with the evidence path.
+Save to `.verify/evidence/<YYYY-MM-DD-HHMM>/` in the project: one screenshot per step plus `console.txt` with errors. Some browser MCPs only write files inside their configured workspace roots and refuse the project path; then take the screenshot without `filePath`, use the path the tool returns, and copy that file into `.verify/` with `cp`. Keep `.verify/` out of git via `.git/info/exclude`, not the shared `.gitignore`. Report one line per flow: pass, fail or not driven, with the evidence path.
 
 ## 5. Cleanup
 
