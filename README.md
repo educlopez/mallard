@@ -137,6 +137,12 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `ps-storefront-polish` | Polish method and reusable details for any PS 8/9 storefront theme |
 | `ps-translate` | Detect and translate untranslated strings in a PS install, any language |
 | `ps-view-transitions` | Add View Transitions to a PS child theme |
+| `verify-ps-project` | Drive the local storefront (home, product, cart, checkout), capture evidence, keep the feature map honest |
+| `skill-author` | Create or edit a mallard skill, command or agent: frontmatter, triggers, writing pass, lint |
+| `reflect` | Turn a session's learnings into approved edits of existing skills |
+| `blast-radius` | Find what a change could break outside the diff and prove the one safety fact |
+| `no-comments` | Replace workaround comments in a diff with root-cause fixes |
+| `show-me-your-work` | TSV decision trail for long or unattended work |
 
 ## Commands
 

@@ -12,7 +12,7 @@ A rule nothing enforces will be broken again. Each row pairs a rule with its che
 | Every skill, command and agent appears in `README.md` | `scripts/lint-skills.sh` |
 | PR stays within 400 changed lines | `.github/workflows/pr-check.yml` |
 | Bump `version` when behavior changes | Prose only. Candidate: compare against the last tag in CI. |
-| Trigger phrases in the `description` | Prose only |
+| Trigger phrases in the `description` | Prose only (`skill-author`) |
 
 ## Review checklist for operations that can be interrupted
 

@@ -11,7 +11,7 @@
    version: "0.1.0"
    ---
    ```
-3. Validate: `make lint-skills` (CI runs the same check)
+3. Write it with the `skill-author` skill, then validate: `make lint-skills` (CI runs the same check)
 4. Locally (during development):
    ```bash
    go build -o mallard .
