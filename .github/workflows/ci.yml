@@ -89,3 +89,13 @@ jobs:
 
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  skills:
+    name: Skills Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Validate skills, commands and agents
+        run: ./scripts/lint-skills.sh

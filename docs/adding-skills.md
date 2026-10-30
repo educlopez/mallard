@@ -11,14 +11,15 @@
    version: "0.1.0"
    ---
    ```
-3. Locally (during development):
+3. Validate: `make lint-skills` (CI runs the same check)
+4. Locally (during development):
    ```bash
    go build -o mallard .
    ./mallard update           # re-link skills into ~/.claude/skills (with backup)
    ./mallard doctor           # confirm the new skill appears under "managed"
    ./mallard registry         # check version + drift status
    ```
-4. Ship to the team:
+5. Ship to the team:
    ```bash
    git add skills/<skill-name>/
    git commit -m "feat: add <skill-name> skill"

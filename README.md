@@ -116,6 +116,27 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `task-context` | Turn an Intervals task into a brief + git branch + route to the right skill; log time on finish (powers `/task`) |
 | `ps-project-doc` | Generate a standardized, private (gitignored) `CLAUDE.md` for a PS repo by introspection |
 | `ps-new-project` | Scaffold a new PS client project: child theme (panda/elementflow) + CSS build + CLAUDE.md |
+| `elementflow-kb` | Knowledge base for ElementFlow (Elementor-based builder, `stsitebuilder`) on PrestaShop |
+| `gitlab-changelog-release` | Generate CHANGELOG.md and cut a GitLab release by hand (git-cliff or GitLab Changelog API) |
+| `gitlab-ci-quality-gates` | Wire Cinetic CI components (lint, typecheck, tests, guardrails) and MR branch protection |
+| `gitlab-project-bootstrap` | Set up or audit GitLab project metadata: avatar, description, topics, badges, README |
+| `gitlab-wiki-bootstrap` | Bootstrap or extend a team GitLab Wiki from the real codebase |
+| `lando-check` | Check local Lando is up and serving, start it, diagnose the usual failures |
+| `lando-mail-smtp` | Route PrestaShop outgoing email to Lando's Mailhog |
+| `lando-setup` | Set up a PrestaShop project locally with Lando, or refresh its DB from the server |
+| `mallard-release` | Add skills/commands to mallard and ship a release |
+| `mr-flow` | Branch, commit, push, open and merge a GitLab MR after detecting the base branch |
+| `paginated-report-pdf` | Client-facing paginated PDF report (cover, sections, tables) |
+| `ploi-prestashop-deploy` | Deploy a PrestaShop project from Lando to a Ploi server |
+| `ps-console` | Run cache clears, `bin/console` and one-off scripts inside the Lando container |
+| `ps-css-build` | CSS build pipeline for a PS child theme (partials, lightningcss, hooks) |
+| `ps-email-preview` | Local email template viewer for PrestaShop |
+| `ps-image-regen` | Fix white padding on product images and regenerate thumbnails safely |
+| `ps-invoice-preview` | Local invoice PDF viewer for PrestaShop |
+| `ps-one-page-checkout` | Enable, verify, style and translate the PS 9.2 one-page checkout |
+| `ps-storefront-polish` | Polish method and reusable details for any PS 8/9 storefront theme |
+| `ps-translate` | Detect and translate untranslated strings in a PS install, any language |
+| `ps-view-transitions` | Add View Transitions to a PS child theme |
 
 ## Commands
 
@@ -187,4 +208,4 @@ docs/                         Notes on adding skills and commands
 
 ## Adding a skill
 
-See `docs/adding-skills.md`.
+See `docs/adding-skills.md`. Rules and their checks: `docs/skill-rules.md`. Run `make lint-skills` before pushing.
