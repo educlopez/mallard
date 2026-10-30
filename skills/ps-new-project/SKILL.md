@@ -7,7 +7,7 @@ description: >
   (ps-css-build, ps-project-doc, lando-setup). Does NOT create the GitLab repo,
   the server, or install PrestaShop core. Use when starting a new client
   project locally and you need the standard scaffold fast.
-version: "0.1.1"
+version: "0.1.2"
 metadata:
   author: Eduardo Calvo
 ---
@@ -36,6 +36,13 @@ The CSS build for both tracks is the **same** lightningcss pipeline `ps-css-buil
 ### 0. Preconditions
 Confirm cwd is a PS repo (`themes/` + `modules/`). Detect installed base: `themes/panda` → Panda available; `modules/stsitebuilder` → ElementFlow available. If `--track` mismatches what's installed, warn before proceeding.
 
+### 0b. `.gitignore` — never version `vendor/`
+Before the first commit, check `.gitignore` against the sibling PrestaShop repos (`grep -L '^/vendor' ../*/.gitignore` shows repos that miss it). A fresh PS core install ships a `.gitignore` that does NOT ignore `vendor/`, so a first `git add -A` commits ~80 MB of Composer deps that then live in history forever. Rules, checked across ~30 Cinetic PS repos:
+- **Always ignore** `/vendor/` (uploaded by hand to servers, not deployed from git), `/img/*` (keep the `!/img/**/index.php` and default-logo exceptions), `/upload/*`, `/download/*`, `/var/*` (keep `.gitkeep`), `/cache/*`, `app/config/parameters.php`, `config/settings.inc.php`, `*sitemap.xml`, `*.sql`, `CLAUDE.md`.
+- **Track** `composer.lock` (the weekly `ps-security-audit` job needs it). Many old repos ignore it; new ones should not.
+- **Varies — decide per project:** `/bin/`, `translations/*`, `app/Resources/translations/*`, `mails/*` (most repos ignore translations; ps8/ps9 siblings differ on `bin/` and `mails/`).
+Verify with `git ls-files vendor | head -1` (must print nothing) before committing.
+
 ### 1. Child theme scaffold
 ```bash
 ~/.claude/skills/ps-new-project/scripts/scaffold-theme.sh <track> <name> "<display_name>" .
@@ -58,6 +65,7 @@ If Lando isn't configured and `--no-lando` not passed, hand off to `lando-setup`
 List created/skipped, the child theme path, and remaining manual steps: activate the theme in the Back Office, and (if from scratch) create the repo/server — which this skill deliberately does not touch.
 
 ## Hard rules
+- Never commit `vendor/` — `/vendor/` must be in `.gitignore` before the first commit.
 - Never create the GitLab repo or server, never install PS core, never deploy.
 - Never clobber an existing child theme without explicit confirmation.
 - English-only content; no company names in the skill. (Generated CLAUDE.md may name the client — it's private/untracked.)
