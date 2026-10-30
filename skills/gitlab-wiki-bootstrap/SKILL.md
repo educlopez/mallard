@@ -17,7 +17,7 @@ description: >
   up or brought up to date for any project regardless of its age. Distinct
   from a personal notes/second-brain tool — this is for anything teammates
   need, not the user alone.
-version: "0.3.0"
+version: "0.3.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -197,8 +197,8 @@ add it (to `~/.claude/CLAUDE.md`, not the project):
 
 ```markdown
 ## GitLab Wiki maintenance (Cinetic projects ONLY)
-- Applies ONLY to Cinetic client/work projects hosted on GitLab (cineticd
-  namespace — a `gl-cinetic`-style SSH remote alias, if the user has one, is
+- Applies ONLY to Cinetic client/work projects hosted on GitLab (namespace
+  `nevengroup`, formerly `cineticd` — a `gl-cinetic`-style SSH remote alias, if the user has one, is
   just a local machine convenience, not something to rely on or assume
   elsewhere). Do NOT apply to personal projects or anything not hosted on
   GitLab.
