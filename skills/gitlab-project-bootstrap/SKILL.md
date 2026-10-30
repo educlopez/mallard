@@ -12,14 +12,14 @@ description: >
   page, its description, or wants it to "look proper." Works both for brand-new
   projects (apply everything from minute 1) and for auditing/fixing an existing
   one.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
 
 # GitLab project bootstrap (Cinetic Digital client repos)
 
-Checklist + concrete commands for making a private client repo on gitlab.com (group `cineticd`) look and behave properly from day one — description, topics, badges, README, and a couple of org-hygiene checks worth flagging. Built from real work across PrestaShop projects (`ps9-gaudibarcelonashop`, `vives-8`, `milagros-colombia-b2b-v9.1`) and a Laravel one (`apply-animalmax`).
+Checklist + concrete commands for making a private client repo on gitlab.com (group `nevengroup`, formerly `cineticd`) look and behave properly from day one — description, topics, badges, README, and a couple of org-hygiene checks worth flagging. Built from real work across PrestaShop projects (`ps9-gaudibarcelonashop`, `vives-8`, `milagros-colombia-b2b-v9.1`) and a Laravel one (`apply-animalmax`).
 
 Everything here is done via `glab` (GitLab CLI) — either `glab api` for project-metadata-only changes (no repo files, no PR needed), or a normal clone → branch → MR → merge flow when a repo file (README) needs to change.
 
