@@ -156,6 +156,8 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `/task` | Turn an Intervals task into ready-to-work context (brief, branch, route, time logging) |
 | `/project-doc` | Generate a standardized, private `CLAUDE.md` for the current PS repo |
 | `/new-project` | Scaffold day-1 setup for a new PS project (child theme, CSS build, docs) |
+| `/sharpen` | Make a task deeper, not bigger, then rewrite the prompt |
+| `/ketchup` | Catch up on what changed in this chat and what waits on you |
 
 ## Agents
 
