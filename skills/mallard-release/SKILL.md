@@ -91,7 +91,8 @@ Agents are written as Claude Code subagents. Claude gets the file as-is (`~/.cla
 Codex, OpenCode and Cursor get a rendered copy (Codex TOML in `~/.codex/agents/`, OpenCode
 `mode: subagent` in `~/.config/opencode/agents/`, Cursor `model: inherit` in `~/.cursor/agents/`)
 written to `<source>/.generated/<agent>/agents/` and symlinked. `model` and `color` are dropped
-for them; `tools` only decides readonly / edit-bash permissions. Gemini, Windsurf and the
+for them; `tools` only decides readonly (Cursor) and edit/bash denies (OpenCode). Codex ignores
+`tools`: an agent file cannot override its sandbox. Gemini, Windsurf and the
 generic adapter skip agents.
 
 1. Create `claude/agents/<agent-name>.md` with frontmatter:

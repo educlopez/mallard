@@ -17,7 +17,7 @@ import (
 //     (~/.codex/prompts/*.md, invoked as /prompts:<name>, same $ARGUMENTS),
 //     so they are symlinked as-is. Custom prompts are user-level only, so the
 //     workspace scope has no commands dir. OpenAI marks custom prompts as
-//     deprecated in favour of skills; they still load.
+//     deprecated in favor of skills; they still load.
 type codexAdapter struct{}
 
 func (codexAdapter) ID() string          { return IDCodex }

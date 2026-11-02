@@ -24,39 +24,63 @@ const GeneratedDir = ".generated"
 // returned paths are where the files would be written (dry runs).
 func AgentsFor(repoRoot, agentID string, src []Skill, write bool) ([]Skill, error) {
 	render, ext := rendererFor(agentID)
-	if render == nil || len(src) == 0 {
+	if render == nil {
 		return src, nil
 	}
 
 	outDir := filepath.Join(repoRoot, GeneratedDir, agentID, "agents")
-	if write {
-		// Wipe first so removed source agents do not leave stale renderings.
-		if err := os.RemoveAll(outDir); err != nil {
-			return nil, fmt.Errorf("clean %s: %w", outDir, err)
+	if len(src) == 0 {
+		// No source agents left: drop renderings from earlier runs.
+		if write {
+			if err := os.RemoveAll(outDir); err != nil {
+				return nil, fmt.Errorf("clean %s: %w", outDir, err)
+			}
 		}
-		if err := os.MkdirAll(outDir, 0o755); err != nil {
-			return nil, fmt.Errorf("create %s: %w", outDir, err)
+		return nil, nil
+	}
+
+	// Render into a staging dir and swap it in only once every file is
+	// written, so a failed read never leaves installed links dangling.
+	stage := outDir + ".tmp"
+	if write {
+		if err := os.RemoveAll(stage); err != nil {
+			return nil, fmt.Errorf("clean %s: %w", stage, err)
+		}
+		if err := os.MkdirAll(stage, 0o755); err != nil {
+			return nil, fmt.Errorf("create %s: %w", stage, err)
 		}
 	}
 
 	out := make([]Skill, 0, len(src))
 	for _, s := range src {
 		base := strings.TrimSuffix(s.Name, filepath.Ext(s.Name))
-		dst := filepath.Join(outDir, base+ext)
 		if write {
 			data, err := os.ReadFile(s.SrcPath)
 			if err != nil {
+				_ = os.RemoveAll(stage)
 				return nil, fmt.Errorf("read %s: %w", s.SrcPath, err)
 			}
 			fm, body := splitFrontmatter(string(data))
 			if fm["name"] == "" {
 				fm["name"] = base
 			}
+			dst := filepath.Join(stage, base+ext)
 			if err := os.WriteFile(dst, []byte(render(fm, body)), 0o644); err != nil {
+				_ = os.RemoveAll(stage)
 				return nil, fmt.Errorf("write %s: %w", dst, err)
 			}
 		}
-		out = append(out, Skill{Name: base + ext, SrcPath: dst})
+		out = append(out, Skill{Name: base + ext, SrcPath: filepath.Join(outDir, base+ext)})
+	}
+
+	if write {
+		// Removing outDir drops renderings of deleted source agents too.
+		if err := os.RemoveAll(outDir); err != nil {
+			return nil, fmt.Errorf("clean %s: %w", outDir, err)
+		}
+		if err := os.Rename(stage, outDir); err != nil {
+			return nil, fmt.Errorf("move %s: %w", stage, err)
+		}
 	}
 	return out, nil
 }
@@ -89,7 +113,7 @@ func renderCodex(fm map[string]string, body string) string {
 
 // renderOpenCode emits an OpenCode subagent. The Claude tools allowlist maps to
 // permission denies for edit and bash; model and color are dropped because
-// OpenCode expects provider/model ids and hex or theme colours.
+// OpenCode expects provider/model ids and hex or theme colors.
 func renderOpenCode(fm map[string]string, body string) string {
 	var b strings.Builder
 	b.WriteString("---\n")

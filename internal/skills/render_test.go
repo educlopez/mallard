@@ -127,3 +127,40 @@ func TestAgentsForRemovesStaleRenderings(t *testing.T) {
 		t.Fatalf("stale rendering %s survived", stale)
 	}
 }
+
+func TestAgentsForEmptySourceDropsRenderings(t *testing.T) {
+	root, src := renderRepo(t)
+	if _, err := AgentsFor(root, "codex", src, true); err != nil {
+		t.Fatal(err)
+	}
+	out, err := AgentsFor(root, "codex", nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 0 {
+		t.Fatalf("got %d items, want 0", len(out))
+	}
+	dir := filepath.Join(root, GeneratedDir, "codex", "agents")
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatalf("renderings dir %s survived", dir)
+	}
+}
+
+func TestAgentsForKeepsRenderingsOnReadError(t *testing.T) {
+	root, src := renderRepo(t)
+	if _, err := AgentsFor(root, "codex", src, true); err != nil {
+		t.Fatal(err)
+	}
+	broken := append([]Skill{}, src...)
+	broken = append(broken, Skill{Name: "missing.md", SrcPath: filepath.Join(root, "nope.md")})
+	if _, err := AgentsFor(root, "codex", broken, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AgentsFor(root, "codex", broken, true); err == nil {
+		t.Fatal("want read error")
+	}
+	entries, err := os.ReadDir(filepath.Join(root, GeneratedDir, "codex", "agents"))
+	if err != nil || len(entries) != len(src) {
+		t.Fatalf("renderings not kept: %v entries, err %v", len(entries), err)
+	}
+}
