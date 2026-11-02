@@ -117,7 +117,11 @@ func DoctorFix(w io.Writer, repoRoot string, scope agents.Scope, workspaceRoot s
 		}
 		fixes = append(fixes, fixDir(a.ID(), "skills", a.SkillsDirFor(scope, workspaceRoot), allSkills, absRepo)...)
 		fixes = append(fixes, fixDir(a.ID(), "commands", a.CommandsDirFor(scope, workspaceRoot), allCommands, absRepo)...)
-		fixes = append(fixes, fixDir(a.ID(), "agents", a.AgentsDirFor(scope, workspaceRoot), allAgents, absRepo)...)
+		agentItems, err := skills.AgentsFor(absRepo, a.ID(), allAgents, true)
+		if err != nil {
+			return fixes, err
+		}
+		fixes = append(fixes, fixDir(a.ID(), "agents", a.AgentsDirFor(scope, workspaceRoot), agentItems, absRepo)...)
 	}
 
 	if len(fixes) == 0 {

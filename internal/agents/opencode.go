@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 )
 
+// openCodeAdapter targets OpenCode. Skills and commands are plain markdown and
+// are symlinked straight from the source. Agents live in
+// ~/.config/opencode/agents (.opencode/agents in a project) but use their own
+// frontmatter (mode, permission, provider/model), so mallard renders an
+// OpenCode variant of each claude/agents/*.md and links that.
 type openCodeAdapter struct{}
 
 func (openCodeAdapter) ID() string          { return IDOpenCode }
@@ -39,7 +44,13 @@ func (openCodeAdapter) CommandsDir() string {
 	return filepath.Join(home, ".config", "opencode", "commands")
 }
 
-func (openCodeAdapter) AgentsDir() string { return "" }
+func (openCodeAdapter) AgentsDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".config", "opencode", "agents")
+}
 
 func (a openCodeAdapter) SkillsDirFor(scope Scope, ws string) string {
 	return scopedDir(scope, ws, a.SkillsDir, ".opencode", "skills")
@@ -50,5 +61,5 @@ func (a openCodeAdapter) CommandsDirFor(scope Scope, ws string) string {
 }
 
 func (a openCodeAdapter) AgentsDirFor(scope Scope, ws string) string {
-	return scopedDir(scope, ws, a.AgentsDir)
+	return scopedDir(scope, ws, a.AgentsDir, ".opencode", "agents")
 }

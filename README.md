@@ -57,7 +57,7 @@ Grab the latest zip from [Releases](https://github.com/educlopez/mallard/release
 ### After install
 
 ```bash
-mallard update    # install Claude/Codex/OpenCode skills + commands
+mallard update    # install skills, commands and sub-agents for every detected agent
 mallard doctor    # verify installation
 mallard           # launch interactive TUI
 ```
@@ -78,7 +78,29 @@ mallard version                # print version
 The binary auto-detects installed agents (claude, codex, opencode, agents,
 gemini, cursor, windsurf) and symlinks the appropriate skills/commands
 directories. Per-agent support varies: each agent only receives the kinds it
-hosts (e.g. commands link to claude/opencode; sub-agents to claude/cursor).
+hosts.
+
+| Agent | Skills | Commands | Sub-agents |
+|-------|--------|----------|------------|
+| Claude Code | `~/.claude/skills` | `~/.claude/commands` | `~/.claude/agents` |
+| Codex | `~/.agents/skills` | `~/.codex/prompts` (`/prompts:<name>`) | `~/.codex/agents/*.toml` (rendered) |
+| OpenCode | `~/.config/opencode/skills` | `~/.config/opencode/commands` | `~/.config/opencode/agents` (rendered) |
+| Cursor | `~/.cursor/skills` | `~/.cursor/commands` | `~/.cursor/agents` (rendered) |
+| Gemini CLI | `~/.gemini/skills` | — | — |
+| Windsurf | `~/.codeium/windsurf/skills` | — | — |
+| Generic | `~/.agents/skills` | — | — |
+
+Everything is a symlink. Skills and commands link straight to the source.
+Sub-agents for Codex, OpenCode and Cursor need a different format or
+frontmatter, so mallard renders them from `claude/agents/*.md` into
+`<source>/.generated/<agent>/agents/` on every install/update and links those.
+`--scope workspace` uses the project-level equivalents (`.agents/skills`,
+`.codex/agents`, `.opencode/agents`, `.cursor/commands`, ...). Older releases
+linked Codex skills into `~/.codex/skills`; `mallard update` removes those
+stale links. Codex custom prompts are user-level only, so workspace scope
+skips Codex commands. Several agents share `~/.agents/skills` (Codex and the
+generic adapter); `mallard uninstall --agent X` keeps any dir another detected
+agent still uses.
 
 ### From source
 

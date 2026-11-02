@@ -110,7 +110,7 @@ func TestUninstallWorkspaceScope(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := uninstall(&buf, repo, []agents.Adapter{a}, false, agents.ScopeWorkspace, ws); err != nil {
+	if err := uninstall(&buf, repo, []agents.Adapter{a}, nil, false, agents.ScopeWorkspace, ws); err != nil {
 		t.Fatalf("uninstall: %v", err)
 	}
 	if existsLstat(link) {

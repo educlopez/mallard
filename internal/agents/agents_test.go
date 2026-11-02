@@ -14,8 +14,8 @@ func TestAgentsDir(t *testing.T) {
 		wantEmpty  bool   // true: AgentsDir must be ""
 	}{
 		{id: IDClaude, wantSuffix: filepath.Join(".claude", "agents")},
-		{id: IDCodex, wantEmpty: true},
-		{id: IDOpenCode, wantEmpty: true},
+		{id: IDCodex, wantSuffix: filepath.Join(".codex", "agents")},
+		{id: IDOpenCode, wantSuffix: filepath.Join(".config", "opencode", "agents")},
 		{id: IDAgents, wantEmpty: true},
 		{id: IDGemini, wantEmpty: true},
 		{id: IDCursor, wantSuffix: filepath.Join(".cursor", "agents")},
@@ -119,16 +119,34 @@ func TestScopeDirResolution(t *testing.T) {
 func TestWorkspaceScopeSkipsAgentsWithoutLocation(t *testing.T) {
 	ws := t.TempDir()
 	codex, _ := ByID(IDCodex)
-	// Codex has no commands/agents dir globally; workspace must also be empty.
+	// Codex custom prompts are user-level only: global resolves, workspace is empty.
+	if got := codex.CommandsDirFor(ScopeGlobal, ws); !strings.HasSuffix(got, filepath.Join(".codex", "prompts")) {
+		t.Fatalf("codex global CommandsDirFor = %q, want suffix .codex/prompts", got)
+	}
 	if got := codex.CommandsDirFor(ScopeWorkspace, ws); got != "" {
 		t.Fatalf("codex workspace CommandsDirFor = %q, want empty", got)
 	}
-	if got := codex.AgentsDirFor(ScopeWorkspace, ws); got != "" {
-		t.Fatalf("codex workspace AgentsDirFor = %q, want empty", got)
+	if got, want := codex.AgentsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".codex", "agents"); got != want {
+		t.Fatalf("codex workspace AgentsDirFor = %q, want %q", got, want)
 	}
-	// But codex DOES have a skills dir, so workspace resolves it.
-	if got, want := codex.SkillsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".codex", "skills"); got != want {
+	// Codex reads skills from the vendor-neutral .agents/skills.
+	if got, want := codex.SkillsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".agents", "skills"); got != want {
 		t.Fatalf("codex workspace SkillsDirFor = %q, want %q", got, want)
+	}
+	if got, want := LegacySkillsDir(codex, ScopeWorkspace, ws), filepath.Join(ws, ".codex", "skills"); got != want {
+		t.Fatalf("codex workspace LegacySkillsDir = %q, want %q", got, want)
+	}
+	claude, _ := ByID(IDClaude)
+	if got := LegacySkillsDir(claude, ScopeGlobal, ""); got != "" {
+		t.Fatalf("claude LegacySkillsDir = %q, want empty", got)
+	}
+	opencode, _ := ByID(IDOpenCode)
+	if got, want := opencode.AgentsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".opencode", "agents"); got != want {
+		t.Fatalf("opencode workspace AgentsDirFor = %q, want %q", got, want)
+	}
+	cursor, _ := ByID(IDCursor)
+	if got, want := cursor.CommandsDirFor(ScopeWorkspace, ws), filepath.Join(ws, ".cursor", "commands"); got != want {
+		t.Fatalf("cursor workspace CommandsDirFor = %q, want %q", got, want)
 	}
 }
 
@@ -143,7 +161,7 @@ func TestNewAdapterDirs(t *testing.T) {
 		agentsSuffix  string // empty string means AgentsDir must be ""
 	}{
 		{id: IDGemini, skillsSuffix: filepath.Join(".gemini", "skills"), commandsEmpty: true},
-		{id: IDCursor, skillsSuffix: filepath.Join(".cursor", "skills"), commandsEmpty: true, agentsSuffix: filepath.Join(".cursor", "agents")},
+		{id: IDCursor, skillsSuffix: filepath.Join(".cursor", "skills"), agentsSuffix: filepath.Join(".cursor", "agents")},
 		{id: IDWindsurf, skillsSuffix: filepath.Join(".codeium", "windsurf", "skills"), commandsEmpty: true},
 	}
 

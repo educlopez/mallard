@@ -80,7 +80,34 @@ func RunUninstall(repoRoot string, args UninstallArgs) error {
 			ws = cwd
 		}
 	}
-	return uninstall(os.Stdout, repoRoot, adapters, args.DryRun, scope, ws)
+	return uninstall(os.Stdout, repoRoot, adapters, remainingAgents(adapters), args.DryRun, scope, ws)
+}
+
+// remainingAgents returns the detected agents that are NOT being uninstalled.
+// Their dirs must survive: several agents share one (Codex and the generic
+// adapter both read ~/.agents/skills).
+func remainingAgents(targets []agents.Adapter) []agents.Adapter {
+	skip := map[string]bool{}
+	for _, a := range targets {
+		skip[a.ID()] = true
+	}
+	var out []agents.Adapter
+	for _, a := range agents.Detected() {
+		if !skip[a.ID()] {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// agentDirs lists every dir mallard may link into for a.
+func agentDirs(a agents.Adapter, scope agents.Scope, ws string) []string {
+	return []string{
+		a.SkillsDirFor(scope, ws),
+		a.CommandsDirFor(scope, ws),
+		a.AgentsDirFor(scope, ws),
+		agents.LegacySkillsDir(a, scope, ws),
+	}
 }
 
 // selectUninstallAgents resolves which adapters to operate on from the parsed
@@ -99,9 +126,11 @@ func selectUninstallAgents(args UninstallArgs) ([]agents.Adapter, error) {
 }
 
 // uninstall is the pure-ish core: it removes managed symlinks across the given
-// adapters and writes a per-agent summary to w. With dryRun set it changes
-// nothing on disk and only reports what it would remove.
-func uninstall(w io.Writer, repoRoot string, adapters []agents.Adapter, dryRun bool, scope agents.Scope, workspaceRoot string) error {
+// adapters and writes a per-agent summary to w. Dirs that one of the keep
+// agents also uses are left alone, so uninstalling one agent never strips
+// another. With dryRun set it changes nothing on disk and only reports what it
+// would remove.
+func uninstall(w io.Writer, repoRoot string, adapters, keep []agents.Adapter, dryRun bool, scope agents.Scope, workspaceRoot string) error {
 	if scope == "" {
 		scope = agents.ScopeGlobal
 	}
@@ -121,6 +150,15 @@ func uninstall(w io.Writer, repoRoot string, adapters []agents.Adapter, dryRun b
 		return nil
 	}
 
+	sharedWith := map[string]string{}
+	for _, k := range keep {
+		for _, d := range agentDirs(k, scope, workspaceRoot) {
+			if d != "" {
+				sharedWith[d] = k.ID()
+			}
+		}
+	}
+
 	totalRemoved, totalSkipped := 0, 0
 	for _, a := range adapters {
 		fmt.Fprintf(w, "\n  Agent: %s\n", a.ID())
@@ -130,11 +168,11 @@ func uninstall(w io.Writer, repoRoot string, adapters []agents.Adapter, dryRun b
 		}
 
 		removed, skipped := 0, 0
-		for _, dir := range []string{
-			a.SkillsDirFor(scope, workspaceRoot),
-			a.CommandsDirFor(scope, workspaceRoot),
-			a.AgentsDirFor(scope, workspaceRoot),
-		} {
+		for _, dir := range agentDirs(a, scope, workspaceRoot) {
+			if other, ok := sharedWith[dir]; ok {
+				fmt.Fprintf(w, "    -  %s kept (shared with %s)\n", displayDir(dir), other)
+				continue
+			}
 			r, s := unlinkManagedInDir(w, dir, absRepo, dryRun)
 			removed += r
 			skipped += s
@@ -215,4 +253,14 @@ func unlinkManagedInDir(w io.Writer, dir, repoRoot string, dryRun bool) (removed
 		removed++
 	}
 	return removed, skipped
+}
+
+// displayDir abbreviates the home dir to ~ for report lines.
+func displayDir(dir string) string {
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		if dir == home || strings.HasPrefix(dir, home+string(filepath.Separator)) {
+			return "~" + dir[len(home):]
+		}
+	}
+	return dir
 }

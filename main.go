@@ -186,7 +186,7 @@ func printHelp() {
 Usage:
   mallard                        Launch interactive TUI installer
   mallard install                Launch interactive TUI installer
-  mallard install --agent NAME   Install only to NAME (claude|agents|codex|opencode)
+  mallard install --agent NAME   Install only to NAME (claude|codex|opencode|cursor|gemini|windsurf|agents)
   mallard install --all          Install to all detected agents non-interactively
   mallard install --scope SCOPE  Link into global (default) or workspace (<cwd>/.claude) dirs
   mallard update                 Re-link skills/commands, backing up any conflicting files

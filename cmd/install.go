@@ -111,7 +111,11 @@ func installToAgents(repoRoot string, adapters []agents.Adapter, scope agents.Sc
 
 		agentsDir := a.AgentsDirFor(scope, ws)
 		if agentsDir != "" {
-			for _, ag := range allAgents {
+			agentItems, err := skills.AgentsFor(repoRoot, a.ID(), allAgents, true)
+			if err != nil {
+				return err
+			}
+			for _, ag := range agentItems {
 				r := skills.Link(a.ID(), ag, agentsDir)
 				printResult(r)
 				switch r.Status {
