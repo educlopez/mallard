@@ -6,7 +6,7 @@ description: >
   skill or command to mallard, bump a mallard version, "publicar mallard", "subir
   mallard", "nueva versión de mallard", or anything involving editing this repo
   and getting the change to the team's machines.
-version: "0.1.2"
+version: "0.1.3"
 metadata:
   author: Eduardo Calvo
 ---
@@ -87,8 +87,13 @@ mallard update
 
 ## Adding a new agent
 
-Agents are Claude Code subagents. They symlink to `~/.claude/agents/` and are **Claude-only**
-(codex/opencode/generic adapters return an empty agents dir and skip them).
+Agents are written as Claude Code subagents. Claude gets the file as-is (`~/.claude/agents/`).
+Codex, OpenCode and Cursor get a rendered copy (Codex TOML in `~/.codex/agents/`, OpenCode
+`mode: subagent` in `~/.config/opencode/agents/`, Cursor `model: inherit` in `~/.cursor/agents/`)
+written to `<source>/.generated/<agent>/agents/` and symlinked. `model` and `color` are dropped
+for them; `tools` only decides readonly (Cursor) and edit/bash denies (OpenCode). Codex ignores
+`tools`: an agent file cannot override its sandbox. Gemini, Windsurf and the
+generic adapter skip agents.
 
 1. Create `claude/agents/<agent-name>.md` with frontmatter:
    ```yaml
@@ -163,7 +168,7 @@ Windows: download the latest zip from https://github.com/educlopez/mallard/relea
 - **NEVER skip the `version:` field** on skill/command frontmatter. Without it, `mallard registry` reports `unversioned`.
 - **Conventional Commits are mandatory** — they drive the changelog grouping. `chore:` commits get filtered out of release notes.
 - **`mallard update` makes backups** before replacing files. If you blow something away, `mallard update --list-backups` and `--restore <ts>` will recover it.
-- **The first run on a new agent dir** (Claude / Codex / OpenCode / generic) appears as `missing → installed` for every entry. That's expected, not drift.
+- **The first run on a new agent dir** (Claude / Codex / OpenCode / Cursor / generic) appears as `missing → installed` for every entry. That's expected, not drift.
 - **Run `update` from the repo, not a stray binary.** A binary with no sibling `skills/` (for example one built into `/tmp`) materializes its embedded source into `~/.mallard/source/<version>/` and relinks every skill there. For local testing run `./mallard update` from the repo root, or set `MALLARD_DIR=<repo>`. Check afterwards with `ls -la ~/.claude/skills/<name>`: the link must point into the repo.
 - **Skills only ship via tags.** Pushing to `main` without tagging publishes nothing — GH Actions release workflow only fires on `v*` tags.
 

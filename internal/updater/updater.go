@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/educlopez/mallard/internal/agents"
 	"github.com/educlopez/mallard/internal/backup"
@@ -22,14 +23,14 @@ const (
 
 // PlanItem describes one source item and what update would do at its target.
 type PlanItem struct {
-	Agent  string
-	Kind   string // "skills" | "commands"
-	Name   string
-	Src    string
-	Dst    string
-	Class  Classification
-	Note   string
-	Err    error
+	Agent string
+	Kind  string // "skills" | "commands" | "agents" | "legacy-skills"
+	Name  string
+	Src   string
+	Dst   string
+	Class Classification
+	Note  string
+	Err   error
 }
 
 // AgentReport aggregates plan and execution results for one agent.
@@ -119,7 +120,12 @@ func Run(opts Options) (*Report, error) {
 
 		ar.Items = append(ar.Items, planFor(a, allSkills, "skills", a.SkillsDirFor(scope, ws))...)
 		ar.Items = append(ar.Items, planFor(a, allCommands, "commands", a.CommandsDirFor(scope, ws))...)
-		ar.Items = append(ar.Items, planFor(a, allAgents, "agents", a.AgentsDirFor(scope, ws))...)
+		agentItems, err := skills.AgentsFor(absRepo, a.ID(), allAgents, !opts.DryRun)
+		if err != nil {
+			return nil, err
+		}
+		ar.Items = append(ar.Items, planFor(a, agentItems, "agents", a.AgentsDirFor(scope, ws))...)
+		ar.Items = append(ar.Items, legacyPlanFor(a, allSkills, agents.LegacySkillsDir(a, scope, ws), absRepo)...)
 
 		if !opts.DryRun {
 			for i := range ar.Items {
@@ -186,6 +192,44 @@ func planFor(a agents.Adapter, items []skills.Skill, kind, dstDir string) []Plan
 	return out
 }
 
+// legacyPlanFor plans removal of symlinks that older releases left in a skills
+// dir the agent no longer reads (e.g. ~/.codex/skills). Only symlinks named
+// after a current mallard skill whose target is mallard's (this source root or
+// any ~/.mallard/source/<version>) are touched; real files and foreign links stay.
+func legacyPlanFor(a agents.Adapter, items []skills.Skill, dir, repoRoot string) []PlanItem {
+	if dir == "" {
+		return nil
+	}
+	var out []PlanItem
+	for _, s := range items {
+		dst := filepath.Join(dir, s.Name)
+		info, err := os.Lstat(dst)
+		if err != nil || info.Mode()&os.ModeSymlink == 0 {
+			continue
+		}
+		target, err := os.Readlink(dst)
+		if err != nil || !isMallardTarget(target, repoRoot) {
+			continue
+		}
+		out = append(out, PlanItem{
+			Agent: a.ID(),
+			Kind:  "legacy-skills",
+			Name:  s.Name,
+			Dst:   dst,
+			Class: ClassUpdate,
+		})
+	}
+	return out
+}
+
+func isMallardTarget(target, repoRoot string) bool {
+	sep := string(filepath.Separator)
+	if target == repoRoot || strings.HasPrefix(target, repoRoot+sep) {
+		return true
+	}
+	return strings.Contains(target, sep+filepath.Join(".mallard", "source")+sep)
+}
+
 func classify(src, dst string) Classification {
 	info, err := os.Lstat(dst)
 	if err != nil {
@@ -218,6 +262,10 @@ func applyItem(it *PlanItem, session *backup.Session) {
 	case ClassUpdate:
 		if err := os.Remove(it.Dst); err != nil {
 			it.Err = fmt.Errorf("remove stale symlink: %w", err)
+			return
+		}
+		if it.Src == "" {
+			// legacy cleanup: removal only, nothing to relink.
 			return
 		}
 		if err := ensureLink(it.Src, it.Dst); err != nil {

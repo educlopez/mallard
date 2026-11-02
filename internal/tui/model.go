@@ -535,7 +535,12 @@ func (m Model) runInstall() tea.Cmd {
 			}
 			agentsDir := agent.AgentsDir()
 			if agentsDir != "" {
-				for _, def := range m.allAgentDefs {
+				defs, err := skills.AgentsFor(m.repoRoot, agent.ID(), m.allAgentDefs, true)
+				if err != nil {
+					results = append(results, skills.LinkResult{Agent: agent.ID(), Skill: "agents", Status: "error", Err: err})
+					defs = nil
+				}
+				for _, def := range defs {
 					r := skills.Link(agent.ID(), def, agentsDir)
 					results = append(results, r)
 				}

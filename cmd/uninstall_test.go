@@ -203,7 +203,7 @@ func TestUninstallAcrossAgent(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := uninstall(&buf, repo, []agents.Adapter{a}, false, agents.ScopeGlobal, ""); err != nil {
+	if err := uninstall(&buf, repo, []agents.Adapter{a}, nil, false, agents.ScopeGlobal, ""); err != nil {
 		t.Fatalf("uninstall: %v", err)
 	}
 
@@ -220,7 +220,7 @@ func TestUninstallAcrossAgent(t *testing.T) {
 
 func TestUninstallNoAgents(t *testing.T) {
 	var buf bytes.Buffer
-	if err := uninstall(&buf, t.TempDir(), nil, false, agents.ScopeGlobal, ""); err != nil {
+	if err := uninstall(&buf, t.TempDir(), nil, nil, false, agents.ScopeGlobal, ""); err != nil {
 		t.Fatalf("uninstall: %v", err)
 	}
 	if !bytes.Contains(buf.Bytes(), []byte("No agents detected")) {
@@ -259,5 +259,37 @@ func TestParseUninstallArgs(t *testing.T) {
 				t.Fatalf("got %+v, want %+v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestUninstallKeepsDirSharedWithRemainingAgent(t *testing.T) {
+	repo := t.TempDir()
+	src := filepath.Join(repo, "skills", "foo")
+	mkdir(t, src)
+	shared := t.TempDir()    // e.g. ~/.agents/skills, read by codex AND generic
+	ownAgents := t.TempDir() // e.g. ~/.codex/agents, codex only
+	sharedLink := filepath.Join(shared, "foo")
+	ownLink := filepath.Join(ownAgents, "foo")
+	for _, l := range []string{sharedLink, ownLink} {
+		if err := os.Symlink(src, l); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	codex := fakeAdapter{id: "codex", detect: true, skillsDir: shared, agentsDir: ownAgents}
+	generic := fakeAdapter{id: "agents", detect: true, skillsDir: shared}
+
+	var buf bytes.Buffer
+	if err := uninstall(&buf, repo, []agents.Adapter{codex}, []agents.Adapter{generic}, false, agents.ScopeGlobal, ""); err != nil {
+		t.Fatalf("uninstall: %v", err)
+	}
+	if !existsLstat(sharedLink) {
+		t.Fatalf("link in dir shared with a remaining agent must survive:\n%s", buf.String())
+	}
+	if existsLstat(ownLink) {
+		t.Fatalf("link in codex-only dir should have been removed")
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("shared with agents")) {
+		t.Fatalf("report should explain the kept dir:\n%s", buf.String())
 	}
 }

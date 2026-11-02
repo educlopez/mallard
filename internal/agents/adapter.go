@@ -63,3 +63,18 @@ type Adapter interface {
 	CommandsDirFor(scope Scope, workspaceRoot string) string
 	AgentsDirFor(scope Scope, workspaceRoot string) string
 }
+
+// legacySkillsDirer is implemented by adapters whose skills dir moved between
+// mallard releases. The old dir is only consulted to clean up stale links.
+type legacySkillsDirer interface {
+	LegacySkillsDirFor(scope Scope, workspaceRoot string) string
+}
+
+// LegacySkillsDir returns the adapter's pre-move skills dir, or "" if it never
+// moved.
+func LegacySkillsDir(a Adapter, scope Scope, workspaceRoot string) string {
+	if l, ok := a.(legacySkillsDirer); ok {
+		return l.LegacySkillsDirFor(scope, workspaceRoot)
+	}
+	return ""
+}
