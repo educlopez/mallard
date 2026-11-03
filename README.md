@@ -152,6 +152,7 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `ploi-prestashop-deploy` | Deploy a PrestaShop project from Lando to a Ploi server |
 | `ps-console` | Run cache clears, `bin/console` and one-off scripts inside the Lando container |
 | `ps-css-build` | CSS build pipeline for a PS child theme (partials, lightningcss, hooks) |
+| `ps-theme-cache` | Make theme CSS/JS changes reach the browser when assets are combined in assets/cache (CCC) |
 | `ps-email-preview` | Local email template viewer for PrestaShop |
 | `ps-image-regen` | Fix white padding on product images and regenerate thumbnails safely |
 | `ps-invoice-preview` | Local invoice PDF viewer for PrestaShop |
