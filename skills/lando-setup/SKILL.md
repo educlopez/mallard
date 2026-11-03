@@ -8,7 +8,7 @@ description: >
   "prepara en local", "levanta el lando de X", "configura X en local", "actualízame
   la DB", "refresca la DB de X", "bájame la DB de X", "sync DB", or "quiero la DB
   actualizada de X".
-version: "0.4.0"
+version: "0.5.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -624,6 +624,16 @@ lando ssh -s database -c "mysql -uroot ${RECIPE} -e 'source /app/urls.sql'"
 rm urls.sql
 ```
 
+**Multistore (several rows in `{prefix}shop_url`): do NOT run the `shop_url` UPDATE above as is.** It writes the
+same domain to every shop and leaves all of them on one Lando host. Check first, then update per `id_shop`
+with the host each shop has in `.lando.yml` `proxy:` (shop id → `*.lndo.site`):
+```bash
+lando ssh -s database -c "mysql -uroot ${RECIPE} -e 'SELECT id_shop,domain FROM ${DB_PREFIX}shop_url'"
+# then, one line per shop:
+# UPDATE ${DB_PREFIX}shop_url SET domain='<host>.lndo.site', domain_ssl='<host>.lndo.site' WHERE id_shop=<n>;
+```
+`PS_SHOP_DOMAIN` / `PS_SHOP_DOMAIN_SSL` (global rows) take the main shop's host.
+
 ## Step 14 — Clear cache
 
 ```bash
@@ -763,6 +773,16 @@ lando ssh -s database -c "mysql -uroot ${RECIPE} -e 'source /app/urls.sql'"
 rm urls.sql
 ```
 
+**Multistore (several rows in `{prefix}shop_url`): do NOT run the `shop_url` UPDATE above as is.** It writes the
+same domain to every shop and leaves all of them on one Lando host. Check first, then update per `id_shop`
+with the host each shop has in `.lando.yml` `proxy:` (shop id → `*.lndo.site`):
+```bash
+lando ssh -s database -c "mysql -uroot ${RECIPE} -e 'SELECT id_shop,domain FROM ${DB_PREFIX}shop_url'"
+# then, one line per shop:
+# UPDATE ${DB_PREFIX}shop_url SET domain='<host>.lndo.site', domain_ssl='<host>.lndo.site' WHERE id_shop=<n>;
+```
+`PS_SHOP_DOMAIN` / `PS_SHOP_DOMAIN_SSL` (global rows) take the main shop's host.
+
 ### R4 — Clear cache
 
 ```bash
@@ -789,6 +809,13 @@ CSS). Offer to recreate the employee.
 - Large DBs (>500MB) can take 5+ min to import — normal
 - If shop shows wrong theme/images: check module status or trigger `lando-img-placeholder` skill
 - If `lando db-import` hangs > 30min: check disk space with `lando exec appserver df -h`
+
+### Troubleshooting — `lando start`/`restart` falla con `network <id> not found`
+
+Síntoma: `failed to set up container networking: network <hash> not found`, aunque OrbStack/Docker esté
+arriba (típico tras semanas con el proyecto parado). Los contenedores viejos apuntan a una red Docker que ya
+no existe. `lando restart` no lo arregla; `lando rebuild -y` recrea los contenedores y **conserva el volumen
+de la DB** (`<app>_data_database`). No hace falta `lando destroy`, que sí borraría la DB local.
 
 ### Troubleshooting — 502 en lemp con varios proyectos Lando a la vez
 
