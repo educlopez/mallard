@@ -8,7 +8,7 @@ description: >
   assets/cache/theme-<hash><n>.css, or right after deploying a theme change to
   PRE/PROD ("el CSS no se actualiza", "no se ve el cambio", "borra la caché del
   tema", "PS_CCCCSS_VERSION", "limpiar caché CSS tras el deploy").
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -43,13 +43,15 @@ lando php bin/console cache:clear
 ```
 Recarga la página (con una pausa: si el JS corre antes de que cargue, `querySelector` devuelve null).
 
+Antes de lanzar el SQL: el prefijo sale de `database_prefix` en `app/config/parameters.php` (en ps9-espaciopiessanos es `sp9_`, no `ps_`) y la BD de Lando es `lemp` con la receta `lemp` (usuario `root`). Si la `cache:clear` se queda sin memoria, añade `-d memory_limit=-1` al `php` y usa `--no-warmup`. Si el CSS sigue siendo el viejo, comprueba que el nombre del fichero cacheado cambió de versión antes de buscar otra causa.
+
 ## PRE / PROD
 
 Después de un pull que toque `assets/css/` o `templates/` con clases nuevas, hay que regenerar la caché:
 
 1. **Preferido:** Backoffice → Parámetros avanzados → Rendimiento → **Borrar caché**. En multitienda,
    hazlo en *todas las tiendas* (cada una tiene su versión).
-2. Alternativa por servidor: subir `PS_CCCCSS_VERSION` de esa tienda en +1. Es una escritura en la DB del
+2. Alternativa por servidor: subir `PS_CCCCSS_VERSION` de esa tienda en +1 (y `PS_CCCJS_VERSION` si cambió JS). Si la tienda corre en entorno `dev` (modo depuración), limpia también la caché `dev`: `bin/console cache:clear --env=dev --no-warmup`. Es una escritura en la DB del
    servidor: pedir confirmación antes, sobre todo en PROD.
 
 No borres a mano los ficheros de `assets/cache/`: es salida generada y se regenera sola.
