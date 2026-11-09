@@ -1,12 +1,10 @@
 ---
 name: skill-author
 description: >
-  Guided way to create or edit a skill, command or agent in the mallard repo:
-  frontmatter, trigger phrases in Spanish, a "what it does not do" section,
-  version bump rule, writing pass, lint. Use when the user says "crea una skill",
-  "añade una skill a mallard", "mejora la descripción de la skill", "esta skill no
-  se dispara", "nueva skill para X", or edits anything under skills/ or claude/.
-version: "0.1.0"
+  Create or edit a skill, command or agent in the mallard repo, from the
+  frontmatter to the lint. Use when the user says "crea una skill" or "esta
+  skill no se dispara", or edits anything under skills/ or claude/.
+version: "0.2.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -30,9 +28,8 @@ If a skill with the same job exists, edit it instead of adding another.
 ---
 name: <dir-name>
 description: >
-  What it does, then "Use when the user says "..."" with 4-6 real phrases in
-  Spanish (and English if the user mixes), plus the contexts and file names that
-  should fire it.
+  What it does, then "Use when ..." with one trigger per distinct case: a
+  phrase the user really says in Spanish, a context, a file name.
 version: "0.1.0"
 metadata:
   author: <name>
@@ -41,13 +38,20 @@ metadata:
 
 The `description` is the only text that decides whether the skill loads. Put triggers there, not in the body.
 
+Every description is loaded on every turn of every project, so each word costs context whether or not the skill fires:
+
+- One trigger per case. "crea una skill", "nueva skill para X" and "añade una skill" are one case: keep one.
+- Leave out what the body already says (steps, flags, exceptions).
+- Target: 350 characters or fewer.
+
 ## 3. Body
 
 1. One sentence: what it does and the closest skill it is not (`does not set X up, use Y`).
-2. Numbered steps with real commands. Imperative voice, one action per step, one term per thing.
+2. Numbered steps with real commands. Imperative voice, one action per step, one term per thing. End each step with the condition that proves it is finished ("Done when `lando info` lists the appserver"): a step with no checkable end gets cut short.
 3. A table only when comparing outcomes (symptom, cause, action).
 4. A "what it does not do" line. Include any action that needs the user's OK.
 5. Long reference material goes to `references/*.md`, linked from the body.
+6. Each rule has one home: when another skill already states it, write a step that loads that skill ("Follow `lando-setup`") instead of copying its text. Naming a skill in passing does not load its body.
 
 ## 4. Writing pass
 
