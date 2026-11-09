@@ -9,7 +9,7 @@ description: >
   never searched automatically.
   Use this skill for the /task command, or whenever the user references an
   Intervals task by its numeric ID and wants to start or close work on it.
-version: "0.1.0"
+version: "0.2.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -120,10 +120,11 @@ Billing is booked in **15-minute bands, minimum 15 min** (0.25h increments). Nev
 2. Round the hint **up** to the nearest 0.25h and present as a suggestion.
 3. Ask the user for the **real** time (accept the suggestion or a typed value).
 4. Ask **billable? (y/n)** — every time, no default.
-5. Resolve the worktype id (see below), then:
-   `add_time_entry(taskId=<localid>, worktypeid=<id>, date=<today YYYY-MM-DD>, time=<confirmed decimal hours>, billable=<bool>)`.
+5. Write a `description`: ONE short, high-level sentence on what was done (e.g. "text fixes on the landing page per client feedback"), in the user's language. No file names, line numbers, exact strings, commands or deploy steps. **Always include it**, unless the user explicitly says to log without a message. Draw it from the session work; do not ask for it. Keep it strictly technical and work-related: never mention personal, private or sensitive matters (people's health, finances, credentials, internal disputes, client complaints), even if they came up in the session.
+6. Resolve the worktype id (see below), then:
+   `add_time_entry(taskId=<localid>, worktypeid=<id>, date=<today YYYY-MM-DD>, time=<confirmed decimal hours>, billable=<bool>, description=<text from step 5>)`.
 
-Never write a time entry without the user's confirmed number.
+**Never send email notifications**: always omit `send_notifications` or pass `false`, and never enable it unless the user explicitly asks for that specific entry. Never write a time entry without the user's confirmed number. The same applies when the user asks to log time outside `/task done` (e.g. "add half an hour to the task"): include a description by default.
 
 ### Worktype resolution — always "Varis"/"Varios"
 

@@ -1,7 +1,7 @@
 ---
 name: task
 description: Turn an Intervals task into ready-to-work context — fetch it, build a brief, classify it, create the branch, and route it to the right tool. Intervals is the sole source of truth; Google Workspace is an opt-in enricher only.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -30,6 +30,6 @@ Load and follow the **`task-context`** skill (`~/.claude/skills/task-context/SKI
 4. On `--enrich`: run the gws Gmail/Drive helper, fold snippets in.
 5. Classify the type and name the routing skill/agent.
 6. Create the git branch `<localid>` (or `<localid>-<slug>` on collision) unless `--no-branch`.
-7. On `done`: run the time model (suggest a 15-min-band value, take the real one from the user, ask billable, then `add_time_entry`). Never commit or push.
+7. On `done`: run the time model (suggest a 15-min-band value, take the real one from the user, ask billable, then `add_time_entry` with a short `description` of the work done, always, unless the user says to omit it). Never commit or push.
 
 Do NOT auto-enrich. Do NOT auto-log time. Keep everything Intervals-first.
