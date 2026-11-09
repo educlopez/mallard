@@ -17,7 +17,7 @@ Adapted from pstack's `reflect`; the environment categories come from `retro` in
 
 ## 1. Skip when
 
-The session was trivial, off-topic, or the skill that applied was followed correctly. One-offs are not learnings.
+The session was trivial or off-topic, or the skill that applied was followed correctly and the environment did not get in the way. One-offs are not learnings.
 
 ## 2. Collect
 
@@ -40,9 +40,9 @@ Environment:
 - **Automated check**: you made a mistake that a lint rule, a test or a CI job could have caught. Read the project's own check commands first: a check that exists but is not wired is the finding.
 - **Tool economy**: an expensive tool call (large output, many round trips) that a script or a narrower command replaces.
 - **Information access**: a fact you needed was out of reach, such as a log nobody saved or a service with no read access.
-- **No-op**: a line in `CLAUDE.md` or a skill that did not change what you did, or that you obey by default.
+- **No-op**: a line in `CLAUDE.md` or a skill whose case came up in the session and that changed nothing you did, or that you obey by default. A rule whose case did not come up is untested, not a no-op.
 
-Done when every correction the user made in the session is either a candidate or dismissed as a one-off.
+Done when every correction the user made and each of the nine kinds above has been checked, and each is a candidate, a one-off or "nothing found".
 
 ## 4. Route each candidate
 

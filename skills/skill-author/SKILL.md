@@ -51,7 +51,7 @@ Every description is loaded on every turn of every project, so each word costs c
 3. A table only when comparing outcomes (symptom, cause, action).
 4. A "what it does not do" line. Include any action that needs the user's OK.
 5. Long reference material goes to `references/*.md`, linked from the body.
-6. Each rule has one home: when another skill already states it, name that skill instead of copying its text.
+6. Each rule has one home: when another skill already states it, write a step that loads that skill ("Follow `lando-setup`") instead of copying its text. Naming a skill in passing does not load its body.
 
 ## 4. Writing pass
 
