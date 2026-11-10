@@ -12,9 +12,9 @@ description: >
   Also use it whenever the user asks to log, add or register time on any
   Intervals task, even without saying /task or giving an ID in the same
   sentence ("imputar tiempo", "imputa horas", "mete 0:30 en cada una", "añade
-  media hora a la tarea", "log time", "add time entry"): it enforces asking
-  billable every time and always writing a description.
-version: "0.2.1"
+  media hora a la tarea", "log time", "add time entry"): it logs billable by
+  default (unless told otherwise) and always writes a description.
+version: "0.3.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -124,7 +124,7 @@ Billing is booked in **15-minute bands, minimum 15 min** (0.25h increments). Nev
 1. Optionally show a naive elapsed figure **labeled**: `hint (unreliable, includes idle): ~Xh`.
 2. Round the hint **up** to the nearest 0.25h and present as a suggestion.
 3. Ask the user for the **real** time (accept the suggestion or a typed value).
-4. Ask **billable? (y/n)** — every time, no default.
+4. **Billable defaults to `true`.** Do not ask. Set `billable=false` only when the user says so for that entry. State the value you used in the reply.
 5. Write a `description`: ONE short, high-level sentence on what was done (e.g. "text fixes on the landing page per client feedback"), in the user's language. No file names, line numbers, exact strings, commands or deploy steps. **Always include it**, unless the user explicitly says to log without a message. Draw it from the session work; do not ask for it. Keep it strictly technical and work-related: never mention personal, private or sensitive matters (people's health, finances, credentials, internal disputes, client complaints), even if they came up in the session.
 6. Resolve the worktype id (see below), then:
    `add_time_entry(taskId=<localid>, worktypeid=<id>, date=<today YYYY-MM-DD>, time=<confirmed decimal hours>, billable=<bool>, description=<text from step 5>)`.
