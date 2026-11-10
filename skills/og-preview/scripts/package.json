@@ -1,0 +1,9 @@
+{
+  "name": "og-preview-render",
+  "private": true,
+  "type": "module",
+  "description": "Renders an OG page (HTML exposing window.DURATION and window.seek) to PNG frames with the system Chrome.",
+  "dependencies": {
+    "playwright-core": "1.48.2"
+  }
+}
