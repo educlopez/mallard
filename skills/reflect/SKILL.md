@@ -2,22 +2,22 @@
 name: reflect
 description: >
   Mine the current session for durable learnings and route each to a concrete
-  edit of an existing skill, command or agent, waiting for approval before
-  applying anything. Use when the user says "reflect", "reflexiona", "qué hemos
-  aprendido", "mejora las skills con lo de hoy", "esto debería ir a una skill", or
-  closes a session that exposed a repeated mistake or a missing step.
-version: "0.1.0"
+  edit of an existing skill, command or agent, or to a backlog check, waiting
+  for approval before applying anything. Use when the user says "reflexiona" or
+  "qué hemos aprendido", or closes a session that exposed a repeated mistake, a
+  missing step or a gap in the agent's environment.
+version: "0.2.0"
 metadata:
   author: Eduardo Calvo
 ---
 
 # reflect
 
-Adapted from pstack's `reflect`. One pass, no parallel reviewers, no model switching. It does not save preferences or session state (that is engram) and does not touch the wiki (that is `second-brain`).
+Adapted from pstack's `reflect`; the environment categories come from `retro` in `mattpocock/skills` (MIT). One pass, no parallel reviewers, no model switching. It does not save preferences or session state (that is engram) and does not touch the wiki (that is `second-brain`).
 
 ## 1. Skip when
 
-The session was trivial, off-topic, or the skill that applied was followed correctly. One-offs are not learnings.
+The session was trivial or off-topic, or the skill that applied was followed correctly and the environment did not get in the way. One-offs are not learnings.
 
 ## 2. Collect
 
@@ -25,12 +25,24 @@ Use what is already in the conversation. If more is needed, read only this sessi
 
 ## 3. Find candidates
 
-A candidate needs evidence from the session:
+A candidate needs evidence from the session.
+
+Skills:
 
 - The user corrected the same thing twice.
 - A skill step was wrong, stale or missing and you worked around it.
 - A skill did not fire when it should have (description problem).
 - A command or path failed in a way the skill did not warn about.
+
+Environment:
+
+- **Navigation**: finding a file or a fact took several searches that one pointer would have saved.
+- **Automated check**: you made a mistake that a lint rule, a test or a CI job could have caught. Read the project's own check commands first: a check that exists but is not wired is the finding.
+- **Tool economy**: an expensive tool call (large output, many round trips) that a script or a narrower command replaces.
+- **Information access**: a fact you needed was out of reach, such as a log nobody saved or a service with no read access.
+- **No-op**: a line in `CLAUDE.md` or a skill whose case came up in the session and that changed nothing you did, or that you obey by default. A rule whose case did not come up is untested, not a no-op.
+
+Done when every correction the user made and each of the nine kinds above has been checked, and each is a candidate, a one-off or "nothing found".
 
 ## 4. Route each candidate
 
@@ -40,13 +52,16 @@ A candidate needs evidence from the session:
 | Wrong or stale fact in a skill | Trivial edit of that skill |
 | New step, pattern or section | Substantive edit, use `skill-author` |
 | Skill did not trigger | Tune its `description` |
+| Navigation gap | One pointer line in the nearest `CLAUDE.md`, naming the file and when to read it |
+| No-op | Delete the whole line |
+| Missing information | A command or access that exposes it, written where the next session will look |
 | Nothing fits and it will recur | New skill via `skill-author` |
 
 Prefer the structural route over adding more prose.
 
 ## 5. Approval
 
-Show a table: candidate, evidence, destination file, proposed change. Reject weak ones with a one-line reason. Wait for the user's OK, then apply only the approved rows. Never edit installed copies under `~/.claude/skills/` (they are symlinks into this repo; edit the repo). Never commit, push or open a PR.
+Show a table, most severe first: candidate, evidence, destination file, proposed change. Reject weak ones with a one-line reason. Wait for the user's OK, then apply only the approved rows. Never edit installed copies under `~/.claude/skills/` (they are symlinks into this repo; edit the repo). Never commit, push or open a PR.
 
 ## 6. Report
 
