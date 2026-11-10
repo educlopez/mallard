@@ -9,7 +9,12 @@ description: >
   never searched automatically.
   Use this skill for the /task command, or whenever the user references an
   Intervals task by its numeric ID and wants to start or close work on it.
-version: "0.2.0"
+  Also use it whenever the user asks to log, add or register time on any
+  Intervals task, even without saying /task or giving an ID in the same
+  sentence ("imputar tiempo", "imputa horas", "mete 0:30 en cada una", "añade
+  media hora a la tarea", "log time", "add time entry"): it enforces asking
+  billable every time and always writing a description.
+version: "0.2.1"
 metadata:
   author: Eduardo Calvo
 ---
