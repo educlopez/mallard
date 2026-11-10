@@ -6,7 +6,7 @@ description: >
   skill or command to mallard, bump a mallard version, "publicar mallard", "subir
   mallard", "nueva versión de mallard", or anything involving editing this repo
   and getting the change to the team's machines.
-version: "0.1.3"
+version: "0.2.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -36,10 +36,16 @@ go build -o mallard .
 git add skills/<name>/ claude/commands/<name>.md
 git commit -m "feat(skills): add <name>"   # or fix:, refactor:, docs:, chore:
 
-# 5. Push
-git push
+# 5. Branch + PR (main is protected: never commit or push to it directly)
+git checkout -b <type>/<short-name> && git push -u origin HEAD
+gh pr create --base main --title "<conventional title>" --body "<why>"
 
-# 6. Tag a release (this is what propagates to the team)
+# 6. Wait for green checks, merge, then CONFIRM main has your commit
+gh pr checks <n> --watch && gh pr merge <n> --merge --delete-branch
+git checkout main && git pull origin main && git log --oneline -3
+
+# 7. Tag a release (this is what propagates to the team). Run it as its own
+#    step, only after step 6 succeeded; never chain it after the merge.
 git tag vX.Y.Z
 git push origin vX.Y.Z
 
@@ -126,10 +132,12 @@ generic adapter skip agents.
 git add <files>
 git commit -m "feat(skills): add <name>"
 # Conventional Commit prefixes: feat, fix, refactor, docs, chore, ci, test
-git push
-git tag vX.Y.Z
+# then PR + merge as in the TL;DR (steps 5-6)
+git tag vX.Y.Z      # only after the merge landed and main contains the commit
 git push origin vX.Y.Z
 ```
+
+A tag pushed on the wrong commit starts the release workflow and creates a draft release. If that happens: delete the remote tag (`git push origin :refs/tags/vX.Y.Z`), the local tag and the draft (`gh release delete vX.Y.Z`), then tag again on the right commit.
 
 Version the **mallard release**, not the skill: skills carry their own versions inside frontmatter, the tag versions the binary + the set of skills shipped together.
 
