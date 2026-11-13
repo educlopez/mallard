@@ -1,20 +1,27 @@
 <?php
 /**
- * Env Favicon · favicon distinto por entorno (local / PRE) sin tocar el tema.
- * -----------------------------------------------------------------------------
- * - Producción (y cualquier host que no case con las listas) NO se toca: sigue el
- *   favicon nativo de PrestaShop (Diseño › Tema y logotipo › Favicon).
- * - Local y PRE: se sustituyen los <link rel="icon"> de la <head> por una insignia
- *   de color con la marca del cliente. Un hook de salida (actionOutputHTMLBefore),
- *   sin plantillas, sin copiar head.tpl del tema padre.
- * - Los dominios de cada entorno se guardan en la base de datos (BO), no en ficheros
- *   públicos del tema.
- * - Se sube UN logo/marca (PNG/JPG/WEBP) y el módulo genera las insignias y el .ico de
- *   producción con GD, y puede cargarlo como favicon nativo de PrestaShop.
+ * Env Favicon - a different favicon per environment (local / staging), no theme edits.
  *
- * Compatibilidad: PrestaShop 1.7.7 → 9 (PHP 7.2+, sin typed properties).
+ * - Production (and any host that matches no list) is NEVER touched: it keeps the
+ *   native PrestaShop favicon (Design > Theme & Logo > Favicon).
+ * - Local and staging: the <link rel="icon"> tags of the <head> are replaced by a
+ *   coloured badge with the client's brand mark, through an output hook
+ *   (actionOutputHTMLBefore): no templates, no copy of the parent theme's head.tpl.
+ * - The domains of each environment live in the database (back office), not in
+ *   public theme files.
+ * - ONE logo is uploaded; the module builds the badges and the production .ico with
+ *   GD, and can load it as the native PrestaShop favicon.
  *
- * @author Cinetic Digital
+ * Compatibility: PrestaShop 1.7.7 -> 9 (PHP 7.2+, no typed properties).
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
+ * that is bundled with this package in the file LICENSE.md.
+ *
+ * @author    Eduardo Calvo
+ * @copyright Eduardo Calvo
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0
  */
 if (!defined('_PS_VERSION_')) {
     exit;
@@ -36,20 +43,20 @@ class EnvFavicon extends Module
     {
         $this->name = 'envfavicon';
         $this->tab = 'front_office_features';
-        $this->version = '0.1.0';
-        $this->author = 'Cinetic Digital';
+        $this->version = '0.2.0';
+        $this->author = 'Eduardo Calvo';
         $this->need_instance = 0;
         $this->bootstrap = true;
         $this->ps_versions_compliancy = array('min' => '1.7.7.0', 'max' => _PS_VERSION_);
 
         parent::__construct();
 
-        $this->displayName = $this->l('Env Favicon · favicon por entorno');
-        $this->description = $this->l('Muestra un favicon distinto en local y PRE para distinguir las pestañas. Producción conserva el favicon nativo de PrestaShop.');
+        $this->displayName = $this->l('Env Favicon');
+        $this->description = $this->l('Shows a different favicon on local and staging so you can tell the tabs apart. Production keeps the native PrestaShop favicon.');
     }
 
     /* ============================================================
-     * Instalación
+     * Install
      * ============================================================ */
 
     public function install()
@@ -71,7 +78,8 @@ class EnvFavicon extends Module
         foreach (array_keys($this->defaults()) as $k) {
             Configuration::deleteByName($k);
         }
-        foreach (glob($this->imgDir() . '{source.*,favicon-*.png,favicon-production.ico}', GLOB_BRACE) ?: array() as $f) {
+        $files = glob($this->imgDir() . '{source.*,favicon-*.png,favicon-production.ico,mark-white.png}', GLOB_BRACE);
+        foreach ($files ? $files : array() as $f) {
             @unlink($f);
         }
 
@@ -99,12 +107,13 @@ class EnvFavicon extends Module
     }
 
     /* ============================================================
-     * Detección de entorno
+     * Environment detection
      * ============================================================ */
 
     /**
-     * 'local' | 'pre' | 'prod'. Solo compara el host con las listas del BO (stripos);
-     * lo que no case es producción (fallo seguro: nunca una insignia de dev en prod).
+     * 'local' | 'pre' | 'prod'. The host is only compared with the lists saved in the
+     * back office (strpos); anything that matches nothing is production (fail safe:
+     * a dev badge is never shown on prod).
      */
     public static function detectEnv($host = null)
     {
@@ -137,7 +146,7 @@ class EnvFavicon extends Module
     }
 
     /* ============================================================
-     * Hook de salida: sustituir los iconos de la <head>
+     * Output hook: replace the icons of the <head>
      * ============================================================ */
 
     public function hookActionOutputHTMLBefore($params)
@@ -151,7 +160,7 @@ class EnvFavicon extends Module
         }
         $file = 'favicon-' . $env . '.png';
         if (!is_file($this->imgDir() . $file)) {
-            return; // aún no se ha generado: se deja el favicon nativo
+            return; // not generated yet: the native favicon stays
         }
         $html = (string) $params['html'];
         $end = stripos($html, '</head>');
@@ -185,23 +194,24 @@ class EnvFavicon extends Module
                     Configuration::updateValue($k, $c);
                 }
             }
-            $out .= $this->displayConfirmation($this->l('Configuración guardada.'));
 
             $error = $this->handleUpload();
             if ($error) {
                 $out .= $this->displayError($error);
             } elseif ($this->hasSource()) {
                 $err = $this->generate();
-                $out .= $err ? $this->displayError($err) : $this->displayConfirmation($this->l('Favicons regenerados.'));
+                $out .= $err ? $this->displayError($err) : $this->displayConfirmation($this->l('Saved. The favicons have been regenerated.'));
+            } else {
+                $out .= $this->displayConfirmation($this->l('Saved. Upload a logo to generate the favicons.'));
             }
         }
 
         if (Tools::isSubmit('submitEnvFaviconNative')) {
             $err = $this->applyNative();
-            $out .= $err ? $this->displayError($err) : $this->displayConfirmation($this->l('Favicon de producción cargado como favicon nativo de PrestaShop.'));
+            $out .= $err ? $this->displayError($err) : $this->displayConfirmation($this->l('The production favicon is now the native PrestaShop favicon.'));
         }
 
-        return $out . $this->renderForm() . $this->renderPreview();
+        return $out . $this->renderPage();
     }
 
     private function hasSource()
@@ -217,120 +227,75 @@ class EnvFavicon extends Module
             return '';
         }
         $file = $_FILES['ENVFAV_SOURCE'];
-        if ($err = ImageManager::validateUpload($file, 3000000, array('png', 'jpg', 'jpeg', 'webp'))) {
-            return $err;
+        $error = ImageManager::validateUpload($file, 3000000, array('png', 'jpg', 'jpeg', 'webp'));
+        if ($error) {
+            return $error;
         }
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $ext = $ext === 'jpeg' ? 'jpg' : $ext;
-        foreach (glob($this->imgDir() . 'source.*') ?: array() as $old) {
-            @unlink($old);
+        $old = glob($this->imgDir() . 'source.*');
+        foreach ($old ? $old : array() as $o) {
+            @unlink($o);
         }
-        $dest = $this->imgDir() . 'source.' . $ext;
-        if (!move_uploaded_file($file['tmp_name'], $dest)) {
-            return $this->l('No se pudo guardar el archivo subido.');
+        if (!move_uploaded_file($file['tmp_name'], $this->imgDir() . 'source.' . $ext)) {
+            return $this->l('The uploaded file could not be saved.');
         }
         Configuration::updateValue(self::K_SOURCE, 'source.' . $ext);
 
         return '';
     }
 
-    private function renderForm()
+    private function renderPage()
     {
-        $sw = array(
-            array('id' => 'on', 'value' => 1, 'label' => $this->l('Sí')),
-            array('id' => 'off', 'value' => 0, 'label' => $this->l('No')),
-        );
-        $env = self::detectEnv();
-        $names = array('local' => $this->l('Local'), 'pre' => $this->l('PRE'), 'prod' => $this->l('Producción (favicon nativo)'));
-        $host = Tools::safeOutput(Tools::getHttpHost(false, false, true));
+        $ctx = $this->context;
+        $ctx->controller->addCSS($this->_path . 'views/css/admin.css?v=' . $this->version);
+        $ctx->controller->addJS($this->_path . 'views/js/admin.js?v=' . $this->version);
 
-        $fields = array(
-            array('type' => 'free', 'label' => $this->l('Este host se detecta como'), 'name' => 'ENVFAV_CURRENT'),
-            array('type' => 'switch', 'label' => $this->l('Activo'), 'name' => self::K_ENABLED, 'is_bool' => true, 'values' => $sw),
-            array('type' => 'textarea', 'label' => $this->l('Dominios LOCAL'), 'name' => self::K_LOCAL, 'rows' => 2, 'desc' => $this->l('Fragmentos de host separados por coma. Si el host contiene alguno, es local.')),
-            array('type' => 'textarea', 'label' => $this->l('Dominios PRE'), 'name' => self::K_PRE, 'rows' => 2, 'desc' => $this->l('Ej.: pre-testing.com, ecommercloud. Todo lo que no case con LOCAL ni PRE es producción y usa el favicon nativo.')),
-            array('type' => 'color', 'label' => $this->l('Color LOCAL'), 'name' => self::K_COLOR_LOCAL),
-            array('type' => 'color', 'label' => $this->l('Color PRE'), 'name' => self::K_COLOR_PRE),
-            array('type' => 'color', 'label' => $this->l('Color PRODUCCIÓN (favicon .ico)'), 'name' => self::K_COLOR_PROD),
-            array('type' => 'file', 'label' => $this->l('Logo o marca (PNG, JPG, WEBP)'), 'name' => 'ENVFAV_SOURCE', 'desc' => $this->l('Un solo archivo: se generan todas las insignias. Mejor con fondo transparente o marca oscura sobre blanco.')),
-            array('type' => 'switch', 'label' => $this->l('Recortar solo la marca'), 'name' => self::K_CROP, 'is_bool' => true, 'values' => $sw, 'desc' => $this->l('Para logos "marca + texto": usa solo el primer bloque (a la izquierda) y quita el ® y las motas.')),
-        );
-        $form = array('form' => array(
-            'legend' => array('title' => $this->l('Favicon por entorno'), 'icon' => 'icon-picture'),
-            'input' => $fields,
-            'submit' => array('title' => $this->l('Guardar y regenerar'), 'name' => 'submitEnvFavicon'),
-            'buttons' => array(array(
-                'title' => $this->l('Cargar el de producción como favicon nativo'),
-                'name' => 'submitEnvFaviconNative',
-                'type' => 'submit',
-                'class' => 'btn btn-default pull-left',
-                'icon' => 'process-icon-upload',
-            )),
-        ));
-
-        $helper = new HelperForm();
-        $helper->module = $this;
-        $helper->name_controller = $this->name;
-        $helper->token = Tools::getAdminTokenLite('AdminModules');
-        $helper->currentIndex = AdminController::$currentIndex . '&configure=' . $this->name;
-        $helper->submit_action = 'submitEnvFavicon';
-        $helper->default_form_language = (int) Context::getContext()->language->id;
-
-        $values = array();
-        foreach ($this->defaults() as $k => $d) {
-            $cur = Configuration::get($k);
-            $values[$k] = ($cur === false) ? $d : $cur;
-        }
-        $values['ENVFAV_SOURCE'] = '';
-        $values['ENVFAV_CURRENT'] = '<p class="form-control-static"><b>' . Tools::safeOutput($names[$env]) . '</b> &nbsp;<small class="text-muted">(' . $host . ')</small></p>';
-        $helper->fields_value = $values;
-
-        return $helper->generateForm(array($form));
-    }
-
-    private function renderPreview()
-    {
         $base = $this->getPathUri() . 'views/img/';
         $v = (int) Configuration::get(self::K_VERSION);
-        $items = array(
-            'favicon-local.png' => $this->l('Local'),
-            'favicon-pre.png' => $this->l('PRE'),
-            'favicon-production.png' => $this->l('Producción'),
-        );
-        $html = '<div class="panel"><div class="panel-heading">' . $this->l('Vista previa') . '</div><div class="row">';
-        $any = false;
-        foreach ($items as $file => $label) {
-            if (!is_file($this->imgDir() . $file)) {
-                continue;
-            }
-            $any = true;
-            $html .= '<div class="col-xs-4 text-center"><img src="' . Tools::safeOutput($base . $file . '?v=' . $v) . '" width="64" height="64" alt=""><br><small>' . $label . '</small></div>';
+        $val = array();
+        foreach ($this->defaults() as $k => $d) {
+            $cur = Configuration::get($k);
+            $val[$k] = ($cur === false) ? $d : $cur;
         }
-        if (!$any) {
-            $html .= '<div class="col-xs-12"><p class="text-muted">' . $this->l('Sube un logo y guarda para generar las insignias.') . '</p></div>';
-        }
+        $hasMark = is_file($this->imgDir() . 'mark-white.png');
 
-        return $html . '</div></div>';
+        $ctx->smarty->assign(array(
+            'ef_action' => AdminController::$currentIndex . '&configure=' . $this->name . '&token=' . Tools::getAdminTokenLite('AdminModules'),
+            'ef_host' => Tools::getHttpHost(false, false, true),
+            'ef_env' => self::detectEnv(),
+            'ef_v' => $val,
+            'ef_has_mark' => $hasMark,
+            'ef_mark_url' => $hasMark ? $base . 'mark-white.png?v=' . $v : '',
+            'ef_has_source' => $this->hasSource(),
+            'ef_has_ico' => is_file($this->imgDir() . 'favicon-production.ico'),
+            'ef_module_logo' => $this->getPathUri() . 'logo.png',
+            'ef_shop_name' => Configuration::get('PS_SHOP_NAME'),
+        ));
+
+        return $this->display(__FILE__, 'views/templates/admin/configure.tpl');
     }
 
     /* ============================================================
-     * Generación con GD
+     * Generation with GD
      * ============================================================ */
 
     /**
-     * Genera favicon-local.png, favicon-pre.png (64 px), favicon-production.png (preview)
-     * y favicon-production.ico (16–64). Devuelve '' si todo fue bien o el error.
+     * Writes favicon-local.png, favicon-pre.png (64 px), favicon-production.png (preview),
+     * favicon-production.ico (16-64) and mark-white.png (live preview in the back office).
+     * Returns '' on success or the error message.
      */
     public function generate()
     {
         if (!extension_loaded('gd')) {
-            return $this->l('Hace falta la extensión GD de PHP.');
+            return $this->l('The PHP GD extension is required.');
         }
         $src = $this->imgDir() . (string) Configuration::get(self::K_SOURCE);
         $mark = $this->extractMark($src, (bool) Configuration::get(self::K_CROP));
         if (!$mark) {
-            return $this->l('No se pudo leer el logo o no se encontró la marca.');
+            return $this->l('The logo could not be read or no mark was found in it.');
         }
+        imagepng($mark, $this->imgDir() . 'mark-white.png');
         $colors = array(
             'local' => (string) Configuration::get(self::K_COLOR_LOCAL),
             'pre' => (string) Configuration::get(self::K_COLOR_PRE),
@@ -357,8 +322,8 @@ class EnvFavicon extends Module
     }
 
     /**
-     * Imagen GD (RGBA, marca blanca con el alfa de la tinta) con la marca recortada.
-     * Tinta = alfa del PNG, o lo oscuro del píxel si no hay transparencia.
+     * GD image (RGBA, white mark with the ink as alpha) of the cropped mark.
+     * Ink = PNG alpha, or the darkness of the pixel when there is no transparency.
      */
     private function extractMark($path, $crop)
     {
@@ -366,9 +331,14 @@ class EnvFavicon extends Module
         if (!$info) {
             return null;
         }
-        $img = $info[2] === IMAGETYPE_PNG ? @imagecreatefrompng($path)
-            : ($info[2] === IMAGETYPE_JPEG ? @imagecreatefromjpeg($path)
-            : (function_exists('imagecreatefromwebp') && $info[2] === IMAGETYPE_WEBP ? @imagecreatefromwebp($path) : false));
+        $img = false;
+        if ($info[2] === IMAGETYPE_PNG) {
+            $img = @imagecreatefrompng($path);
+        } elseif ($info[2] === IMAGETYPE_JPEG) {
+            $img = @imagecreatefromjpeg($path);
+        } elseif ($info[2] === IMAGETYPE_WEBP && function_exists('imagecreatefromwebp')) {
+            $img = @imagecreatefromwebp($path);
+        }
         if (!$img) {
             return null;
         }
@@ -477,8 +447,8 @@ class EnvFavicon extends Module
     }
 
     /**
-     * Píxeles (clave "x,y" => tinta) de los componentes conexos grandes dentro de [x0,x1),
-     * con 2 px de margen alrededor para conservar el antialiasing; descarta el ® y las motas.
+     * Pixels (key "x,y" => ink) of the large connected components inside [x0,x1), with a
+     * 2 px margin to keep the anti-aliasing; drops the (R) sign and specks.
      */
     private function keepLargeComponents(array $ink, $x0, $x1, $h)
     {
@@ -529,10 +499,10 @@ class EnvFavicon extends Module
         return $keep;
     }
 
-    /** Cuadrado redondeado de color + marca blanca centrada (ajustada por ancho, ~74 %). */
+    /** Rounded colour square + white mark centred (fitted by width, ~74 %). */
     private function badge($mark, $hex, $side)
     {
-        $ss = 4; // supermuestreo para bordes suaves
+        $ss = 4; // supersampling for smooth edges
         $big = $side * $ss;
         $img = imagecreatetruecolor($big, $big);
         imagealphablending($img, false);
@@ -572,7 +542,7 @@ class EnvFavicon extends Module
         return $out;
     }
 
-    /** .ico con imágenes PNG embebidas (válido en todos los navegadores actuales). */
+    /** .ico with embedded PNG images (valid in every current browser). */
     private function buildIco(array $pngBySize)
     {
         $n = count($pngBySize);
@@ -590,18 +560,18 @@ class EnvFavicon extends Module
     }
 
     /**
-     * Carga favicon-production.ico como favicon nativo, como hace el BO
+     * Loads favicon-production.ico as the native favicon, as the back office does
      * (LogoUploader::updateFavicon): img/favicon.ico + img/favicon-<id_shop>.ico + PS_FAVICON.
      */
     public function applyNative()
     {
         $ico = $this->imgDir() . 'favicon-production.ico';
         if (!is_file($ico)) {
-            return $this->l('Primero sube un logo y guarda para generar el favicon de producción.');
+            return $this->l('Upload a logo and save first to generate the production favicon.');
         }
         $shopId = (int) Context::getContext()->shop->id;
         if (!@copy($ico, _PS_IMG_DIR_ . 'favicon.ico') || !@copy($ico, _PS_IMG_DIR_ . 'favicon-' . $shopId . '.ico')) {
-            return $this->l('No se pudo escribir en el directorio img/ (permisos).');
+            return $this->l('Could not write to the img/ directory (permissions).');
         }
         Configuration::updateValue('PS_FAVICON', 'favicon-' . $shopId . '.ico');
         Configuration::updateGlobalValue('PS_FAVICON', 'favicon.ico');

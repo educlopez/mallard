@@ -41,7 +41,9 @@ tiene build de plantillas, así que aquí se decide en **render**, por host.
 
 ## Opción A (recomendada) · módulo `envfavicon`
 
-Carpeta `module/envfavicon/` de esta skill. Ligero: un solo hook
+Carpeta `module/envfavicon/` de esta skill (copia del módulo; el repo de origen es
+`Sparkbites/envfavicon`, autor Eduardo Calvo, AFL-3.0, con README, changelog,
+`scripts/build-zip.sh` y traducción `es`). Ligero: un solo hook
 (`actionOutputHTMLBefore`) que solo actúa en local/PRE y solo toca los
 `<link rel="icon">` de la `<head>` (conserva `apple-touch-icon`). Sin tablas, sin JS,
 sin CSS, sin plantillas; no copia `head.tpl` del padre.
@@ -51,18 +53,24 @@ cp -R <skill>/module/envfavicon <proyecto>/modules/envfavicon
 lando php bin/console prestashop:module install envfavicon   # o instalar desde el BO
 ```
 
-En el BO (Módulos › Env Favicon · favicon por entorno):
+En el BO (Módulos › Env Favicon) hay una página propia (cabecera con el host detectado,
+zona de subida con la marca detectada, una tarjeta por entorno con vista previa de
+pestaña y colores en vivo):
 
-1. **Dominios LOCAL y PRE**: fragmentos de host separados por coma (se comparan con
-   `strpos`; el panel muestra cómo se detecta el host actual).
-2. **Colores** de local, PRE y producción.
-3. **Logo o marca** (PNG/JPG/WEBP, ≤3 MB): *un solo archivo*. Con «Recortar solo la
-   marca» usa el primer bloque a la izquierda y quita el ® y las motas (logos
-   "marca + texto"). Guardar regenera `favicon-local.png`, `favicon-pre.png` y
+1. **Logo o marca** (PNG/JPG/WEBP, ≤3 MB): *un solo archivo*, arrastrar o elegir. Con
+   «Recortar solo la marca» usa el primer bloque a la izquierda y quita el ® y las motas
+   (logos "marca + texto"). Guardar regenera `favicon-local.png`, `favicon-pre.png` y
    `favicon-production.ico` (16–64 px, PNG embebido) con GD en ~0,2 s.
+2. **Dominios LOCAL y PRE**: fragmentos de host separados por coma (se comparan con
+   `strpos`); la tarjeta del entorno actual se marca «Estás aquí».
+3. **Colores** de local, PRE y producción, e interruptor «Módulo activo».
 4. **Cargar el de producción como favicon nativo**: copia el `.ico` a `img/favicon.ico`
    y `img/favicon-<id_shop>.ico` y fija `PS_FAVICON`/`PS_IMG_UPDATE_TIME` igual que el BO
    (`LogoUploader::updateFavicon`). Útil en un servidor PRE que luego pasará a producción.
+
+Estilos del BO: el CSS del BO de PrestaShop pisa `label`, `h1–h3` y `small`; el módulo usa
+el prefijo `.ef-wrap` en cada regla y `margin: 0 !important` en los títulos (`.bootstrap h3`
+trae `margin: -20px -20px 15px`).
 
 Seguridad/info: los dominios viven en `ps_configuration` (BD), **no en ficheros
 descargables** del tema; el host solo se compara (nunca se imprime: no hay XSS por
