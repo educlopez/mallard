@@ -1,0 +1,30 @@
+name: Notify docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'skills/**'
+      - 'claude/**'
+      - 'README.md'
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    name: Trigger docs catalog sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch mallard-updated to mallard-docs
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_SYNC_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "DOCS_SYNC_TOKEN not set; docs will sync on their daily schedule"
+            exit 0
+          fi
+          gh api repos/educlopez/mallard-docs/dispatches \
+            -f event_type=mallard-updated \
+            -f 'client_payload[sha]=${{ github.sha }}'
