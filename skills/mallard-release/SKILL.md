@@ -6,7 +6,7 @@ description: >
   skill or command to mallard, bump a mallard version, "publicar mallard", "subir
   mallard", "nueva versión de mallard", or anything involving editing this repo
   and getting the change to the team's machines.
-version: "0.2.0"
+version: "0.2.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -51,6 +51,8 @@ git push origin vX.Y.Z
 
 # GitHub Actions runs goreleaser → publishes binaries + auto-changelog
 ```
+
+The README tables (Skills, Commands, Agents) are the source for the docs site and landing. `scripts/lint-skills.sh` fails CI if a skill, command or agent is missing from them. Once the PR merges, `.github/workflows/docs-sync.yml` pings `mallard-docs`, which opens a PR that regenerates its catalog tables, landing counts and fallback list (`pnpm sync:catalog` does it by hand). Spanish text for new entries goes in `scripts/catalog-es.json` in `mallard-docs`. That ping is optional and needs a `DOCS_SYNC_TOKEN` secret (fine-grained PAT with write access to `mallard-docs`); without it the docs catch up on their daily run.
 
 Team members pick it up with:
 
