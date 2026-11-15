@@ -154,6 +154,7 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `ps-css-build` | CSS build pipeline for a PS child theme (partials, lightningcss, hooks) |
 | `ps-theme-cache` | Make theme CSS/JS changes reach the browser when assets are combined in assets/cache (CCC) |
 | `ps-email-preview` | Local email template viewer for PrestaShop |
+| `ps-env-favicons` | Per-environment favicons for a PrestaShop shop (dev, preview, prod badges), configurable from the back office |
 | `og-preview` | Static and animated link preview (og:image, og:video) from the site's real visuals, for Next, Laravel and PrestaShop |
 | `ps-image-regen` | Fix white padding on product images and regenerate thumbnails safely |
 | `ps-invoice-preview` | Local invoice PDF viewer for PrestaShop |
