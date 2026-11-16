@@ -93,9 +93,22 @@ if [ -d modules ]; then
   [ -n "$m" ] && MODS="$m"
 fi
 
-# --- CLAUDE.md status ---
+# --- Overrides (files that need a one-line "why" in AGENTS.md) ---
+OVR="[]"
+if [ -d override ]; then
+  o=$(find override -type f -name '*.php' ! -name index.php 2>/dev/null | sort | head -60 \
+      | python3 -c 'import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))' 2>/dev/null)
+  [ -n "$o" ] && OVR="$o"
+fi
+
+# --- Agent-instruction files status ---
 HASCMD=false; [ -f CLAUDE.md ] && HASCMD=true
 CMDIGN=false; grep -qxE "[[:space:]]*/?CLAUDE.md[[:space:]]*" .gitignore 2>/dev/null && CMDIGN=true
+CMDTRACK=false; [ -n "$(git ls-files CLAUDE.md 2>/dev/null)" ] && CMDTRACK=true
+HASAGENTS=false; [ -f AGENTS.md ] && HASAGENTS=true
+AGENTSIGN=false; git check-ignore -q AGENTS.md 2>/dev/null && AGENTSIGN=true
+AGENTSLINES=0; [ -f AGENTS.md ] && AGENTSLINES=$(wc -l < AGENTS.md | tr -d ' ')
+HASLOCAL=false; [ -f CLAUDE.local.md ] && HASLOCAL=true
 
 cat <<EOF
 {
@@ -109,7 +122,13 @@ cat <<EOF
   "css_build": $(j "$CSSBUILD"),
   "git_remote": $(j "$REMOTE"),
   "modules": $MODS,
+  "overrides": $OVR,
   "has_claudemd": $HASCMD,
-  "claudemd_gitignored": $CMDIGN
+  "claudemd_gitignored": $CMDIGN,
+  "claudemd_tracked": $CMDTRACK,
+  "has_agentsmd": $HASAGENTS,
+  "agentsmd_gitignored": $AGENTSIGN,
+  "agentsmd_lines": $AGENTSLINES,
+  "has_claude_local": $HASLOCAL
 }
 EOF

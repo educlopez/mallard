@@ -1,20 +1,20 @@
 ---
 name: project-doc
-description: Generate a standardized private CLAUDE.md for the current PrestaShop repo by introspecting it. Auto-fills stack/theme/lando/build/deploy, asks briefly for gotchas/contacts, and keeps the file gitignored (never committed).
-version: "0.1.0"
+description: Generate a lean, team-shared AGENTS.md for the current PrestaShop repo (only what the code does not show), with a one-line CLAUDE.md bridge and a gitignored CLAUDE.local.md for private notes. Enforces a 40-line target and 80-line cap.
+version: "0.2.0"
 metadata:
   author: Eduardo Calvo
 ---
 
-# project-doc — standardized private CLAUDE.md
+# project-doc — lean shared AGENTS.md
 
-Run inside a PrestaShop repo. Writes a lean, consistent `CLAUDE.md` so Claude stops guessing the stack each session. **The file is private — always gitignored, never committed.**
+Run inside a PrestaShop repo. Writes the short instruction file every agent reads on each task. **AGENTS.md is committed and shared; private notes go to `CLAUDE.local.md` (gitignored).**
 
 ## Arguments
 
 `$ARGUMENTS` (optional):
-- (none) — create `CLAUDE.md` if missing.
-- `--refresh` — regenerate even if one exists (backs up to `CLAUDE.md.bak` first).
+- (none) — create `AGENTS.md` if missing; audit it if it exists.
+- `--refresh` — regenerate even if one exists (backs up to `AGENTS.md.bak` first).
 - `--print` — preview only, write nothing.
 
 ## Instructions
@@ -22,9 +22,9 @@ Run inside a PrestaShop repo. Writes a lean, consistent `CLAUDE.md` so Claude st
 Load and follow the **`ps-project-doc`** skill (`~/.claude/skills/ps-project-doc/SKILL.md`):
 
 1. Verify the cwd is a PrestaShop repo.
-2. Run `scripts/detect.sh` to auto-detect PS version, theme + parent, theme stack (Panda/ElementFlow), Lando URL/port, CSS build, git remote, modules. Fill gaps by reading source files.
-3. Ask a short batch for gotchas / contacts / module purposes (skippable).
-4. Fill the template; inject the fixed Deploy (git pull over SSH; test=staging, master=prod) and override-priority text.
-5. Respect `--refresh` / `--print`. Ensure `.gitignore` contains `CLAUDE.md`. Never stage or commit it.
+2. Run `scripts/detect.sh` for PS version, theme, build, overrides and the state of AGENTS.md / CLAUDE.md.
+3. Ask one short batch: production PHP, why each override exists, core/third-party patches, gotchas.
+4. Fill the template. Stay under 80 lines. No directory tables, module lists, overviews or snippets.
+5. Ensure `CLAUDE.md` is the single line `@AGENTS.md`, `CLAUDE.local.md` is gitignored, and AGENTS.md is not ignored.
 
-Never commit CLAUDE.md. Never overwrite an existing one without `--refresh`.
+Never commit. Never delete or replace an existing CLAUDE.md without showing it and getting an OK.

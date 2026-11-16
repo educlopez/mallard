@@ -3,18 +3,18 @@ name: ps-new-project
 description: >
   Orchestrate the day-1 setup that remains after cloning a PrestaShop repo and
   running lando-setup: scaffold the child theme (panda or elementflow track),
-  wire the CSS build, and write CLAUDE.md. Composes existing skills
+  wire the CSS build, and write AGENTS.md. Composes existing skills
   (ps-css-build, ps-project-doc, lando-setup). Does NOT create the GitLab repo,
   the server, or install PrestaShop core. Use when starting a new client
   project locally and you need the standard scaffold fast.
-version: "0.1.2"
+version: "0.1.3"
 metadata:
   author: Eduardo Calvo
 ---
 
 # ps-new-project — new client day-1 scaffold
 
-Runs the repetitive setup that's still manual after clone + `lando-setup`: **child theme → CSS build → CLAUDE.md**. Pure orchestration over skills that already exist. Server/repo/PS-core stay out of scope (manual / PM-owned).
+Runs the repetitive setup that's still manual after clone + `lando-setup`: **child theme → CSS build → AGENTS.md**. Pure orchestration over skills that already exist. Server/repo/PS-core stay out of scope (manual / PM-owned).
 
 ## Universal rule: always a child theme
 Every project gets a child theme, on **both** tracks — you never edit the parent (`panda`/`classic`) directly. The child is the safe override layer; parent files stay untouched so parent updates don't wipe your work. Creating the child is not optional.
@@ -38,7 +38,7 @@ Confirm cwd is a PS repo (`themes/` + `modules/`). Detect installed base: `theme
 
 ### 0b. `.gitignore` — never version `vendor/`
 Before the first commit, check `.gitignore` against the sibling PrestaShop repos (`grep -L '^/vendor' ../*/.gitignore` shows repos that miss it). A fresh PS core install ships a `.gitignore` that does NOT ignore `vendor/`, so a first `git add -A` commits ~80 MB of Composer deps that then live in history forever. Rules, checked across ~30 Cinetic PS repos:
-- **Always ignore** `/vendor/` (uploaded by hand to servers, not deployed from git), `/img/*` (keep the `!/img/**/index.php` and default-logo exceptions), `/upload/*`, `/download/*`, `/var/*` (keep `.gitkeep`), `/cache/*`, `app/config/parameters.php`, `config/settings.inc.php`, `*sitemap.xml`, `*.sql`, `CLAUDE.md`.
+- **Always ignore** `/vendor/` (uploaded by hand to servers, not deployed from git), `/img/*` (keep the `!/img/**/index.php` and default-logo exceptions), `/upload/*`, `/download/*`, `/var/*` (keep `.gitkeep`), `/cache/*`, `app/config/parameters.php`, `config/settings.inc.php`, `*sitemap.xml`, `*.sql`, `CLAUDE.local.md`.
 - **Track** `composer.lock` (the weekly `ps-security-audit` job needs it). Many old repos ignore it; new ones should not.
 - **Varies — decide per project:** `/bin/`, `translations/*`, `app/Resources/translations/*`, `mails/*` (most repos ignore translations; ps8/ps9 siblings differ on `bin/` and `mails/`).
 Verify with `git ls-files vendor | head -1` (must print nothing) before committing.
@@ -55,8 +55,8 @@ Verify with `git ls-files vendor | head -1` (must print nothing) before committi
 ### 2. CSS build — reuse `ps-css-build`
 Run the `ps-css-build` skill targeting `themes/<name>/` (lightningcss + pnpm + pre-commit). Same for both tracks. Skip with `--no-css`.
 
-### 3. CLAUDE.md — reuse `ps-project-doc` (non-interactive)
-Call `ps-project-doc` with known values (track, theme name, PS version, git remote) so it writes CLAUDE.md without re-prompting. Stays gitignored, never committed. Skip with `--no-doc`.
+### 3. AGENTS.md — reuse `ps-project-doc` (non-interactive)
+Call `ps-project-doc` with known values (track, theme name, PS version, git remote) so it writes a lean shared AGENTS.md plus the one-line `CLAUDE.md` (`@AGENTS.md`) bridge without re-prompting. Both are committed; `CLAUDE.local.md` is the private one and stays gitignored. Skip with `--no-doc`.
 
 ### 4. Lando — reuse `lando-setup` (optional)
 If Lando isn't configured and `--no-lando` not passed, hand off to `lando-setup`. Usually already done → skip.
@@ -68,4 +68,4 @@ List created/skipped, the child theme path, and remaining manual steps: activate
 - Never commit `vendor/` — `/vendor/` must be in `.gitignore` before the first commit.
 - Never create the GitLab repo or server, never install PS core, never deploy.
 - Never clobber an existing child theme without explicit confirmation.
-- English-only content; no company names in the skill. (Generated CLAUDE.md may name the client — it's private/untracked.)
+- English-only content; no company names in the skill. (Generated AGENTS.md is committed and shared: no personal notes, no private contacts.)
