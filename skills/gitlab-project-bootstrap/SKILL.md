@@ -12,7 +12,7 @@ description: >
   page, its description, or wants it to "look proper." Works both for brand-new
   projects (apply everything from minute 1) and for auditing/fixing an existing
   one.
-version: "0.1.1"
+version: "0.2.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -206,3 +206,28 @@ These involve people/access, not just files — check and report, then ask befor
 - **Secret push protection** — GitLab has a built-in toggle that blocks commits containing likely secrets before they land.
 
 Report findings plainly (e.g. "14/14 members are Maintainer, branch protection is effectively decorative") and let the user decide the fix — this is their team's access model, not a call to make unilaterally.
+
+## 8. Agentic-readiness repo checks (report, then ask before changing)
+
+Checks that decide whether an agent can safely work a task in Flow and open a merge request. Run them across a set of projects in one pass and print a table; fix nothing without OK.
+
+```bash
+# default branch vs protected branch (a mismatch leaves the real base unprotected)
+glab api "projects/$enc" | python3 -c "import json,sys;print(json.load(sys.stdin)['default_branch'])"
+glab api "projects/$enc/protected_branches" | python3 -c "
+import json,sys
+for b in json.load(sys.stdin): print(b['name'], [x['access_level'] for x in b['push_access_levels']])"
+# does the branch actually exist? (a protected `main` with no such branch protects nothing)
+glab api "projects/$enc/repository/branches/<branch>" >/dev/null && echo exists
+# AGENTS.md and CI on the default branch
+for f in AGENTS.md .gitlab-ci.yml; do glab api "projects/$enc/repository/files/$f?ref=<default_branch>" >/dev/null 2>&1 && echo "$f yes" || echo "$f no"; done
+```
+
+Flag:
+- Default branch not in `protected_branches` (seen in practice: default `master`, only `main` protected).
+- Protection that is hollow: combine with the members check in section 7.
+- No `AGENTS.md` on the default branch, or one that is gitignored or untracked locally.
+- No `.gitlab-ci.yml`; point to `gitlab-ci-quality-gates` (informational mode for team projects).
+- Secrets or `vendor/`, `img/`, `upload/`, `app/config/parameters.php` tracked: `git ls-files vendor img upload app/config/parameters.php | head`.
+- Prod drifting from the repo: compare the server's `git status` / `git log -1` (read-only, via `server-git-pull`) with the default branch.
+

@@ -136,7 +136,7 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `panda-kb` | Knowledge base for the Panda theme by SunnyToo (st* modules, Easy Builder, demos) |
 | `prestashop-kb` | Knowledge base for the PrestaShop 8/9 platform (Symfony, Twig BO, Smarty, hooks, migration) |
 | `task-context` | Turn an Intervals task into a brief + git branch + route to the right skill; log time on finish (powers `/task`) |
-| `ps-project-doc` | Generate a standardized, private (gitignored) `CLAUDE.md` for a PS repo by introspection |
+| `ps-project-doc` | Generate a lean, team-shared `AGENTS.md` (40-line target, 80 cap, only what code does not show) plus a one-line `CLAUDE.md` bridge; private notes go to gitignored `CLAUDE.local.md` |
 | `ps-new-project` | Scaffold a new PS client project: child theme (panda/elementflow) + CSS build + CLAUDE.md |
 | `elementflow-kb` | Knowledge base for ElementFlow (Elementor-based builder, `stsitebuilder`) on PrestaShop |
 | `gitlab-changelog-release` | Generate CHANGELOG.md and cut a GitLab release by hand (git-cliff or GitLab Changelog API) |
@@ -179,7 +179,7 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `/panda` | Ask the `panda-expert` agent (Panda theme + Easy Builder + st* modules) |
 | `/ps` | Ask the `prestashop-expert` agent (PS 8/9 core: Symfony, Twig, Smarty, hooks, migration) |
 | `/task` | Turn an Intervals task into ready-to-work context (brief, branch, route, time logging) |
-| `/project-doc` | Generate a standardized, private `CLAUDE.md` for the current PS repo |
+| `/project-doc` | Generate a lean shared `AGENTS.md` for the current PS repo |
 | `/new-project` | Scaffold day-1 setup for a new PS project (child theme, CSS build, docs) |
 | `/sharpen` | Make a task deeper, not bigger, then rewrite the prompt |
 | `/ketchup` | Catch up on what changed in this chat and what waits on you |
