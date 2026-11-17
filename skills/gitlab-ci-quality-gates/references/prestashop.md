@@ -27,7 +27,36 @@ include:
     inputs:
       setup-command: 'composer install --no-interaction --no-progress'
       test-command: 'SYMFONY_DEPRECATIONS_HELPER=disabled php -d date.timezone=UTC vendor/phpunit/phpunit/phpunit -c tests/Unit/phpunit.xml'
+
+  # Required when only components are included: see the "pipeline with only .pre
+  # jobs is never created" gotcha in SKILL.md.
+  # (repo-local job below)
 ```
+
+When you pass `forbidden-patterns` to `agent-guardrail`, add `.gitlab-ci.yml` to
+`exclude-paths` (for example `exclude-paths: '.gitlab-ci.yml,docs/,vendor/'`),
+or the guardrail flags the CI file that lists the patterns.
+
+Repo-local job that keeps the pipeline alive and guards the child theme's parent
+(adjust the theme directory and parent name):
+
+```yaml
+theme-check:
+  stage: test
+  needs: []   # do NOT omit: see SKILL.md's needs:[] gotcha
+  image: alpine:latest
+  script:
+    - test -f themes/<child-theme>/config/theme.yml
+    - 'grep -q "^parent: <parent-theme>" themes/<child-theme>/config/theme.yml'
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+```
+
+`dependency-audit-php` finds advisories on any PrestaShop install; in an
+informational setup add a top-level `dependency-audit-php:` key with
+`allow_failure: true` (it merges into the component job) so the pipeline shows a
+warning instead of red.
 
 `typecheck-node` is almost never relevant here — PrestaShop themes are plain
 JS, not TS. Skip it unless the theme genuinely has a TS build.

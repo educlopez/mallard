@@ -16,7 +16,7 @@ description: >
   gitlab-security-setup (scheduled Trivy/pnpm supply-chain email report) and
   ps-security-audit — this is about MR-time quality/security GATES, not
   scheduled reports. Do NOT use for GitHub-hosted projects.
-version: "0.4.0"
+version: "0.4.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -125,6 +125,22 @@ gates run identically whether the MR goes into `test` or `main`. No extra
 config needed for this branching model specifically.
 
 ## Gotchas (stack-agnostic)
+
+- **A pipeline that only has `.pre` jobs is never created.** Every `ci-templates`
+  component runs in `.pre`, and GitLab does not create a pipeline that contains
+  only `.pre`/`.post` jobs ("pipeline would have been empty"). A `.gitlab-ci.yml`
+  made only of components, or with a second job that runs only on a schedule,
+  therefore never runs: the file exists, the project looks covered, and no
+  pipeline has ever been created. Always add one repo-local job in a normal stage
+  (the PrestaShop reference has a `theme-check`), and after the first push confirm
+  a pipeline exists: `glab api "projects/<id>/pipelines?per_page=1"` must not
+  return `[]`. Seen in practice on a project that looked fully wired.
+- **The guardrail scans the CI file and the docs you add.** `agent-guardrail`
+  checks every added line against `forbidden-patterns`, including the
+  `.gitlab-ci.yml` that lists those patterns and any `AGENTS.md` or doc that
+  quotes them. When you pass `forbidden-patterns`, also pass
+  `exclude-paths: '.gitlab-ci.yml,...'`, and never spell the patterns out in
+  documentation: say "leftover debug calls" and point to the CI file.
 
 - **`needs: []` on every repo-local job** you add next to ci-templates
   components — omitting it causes silent `skipped` (not `failed`) status the

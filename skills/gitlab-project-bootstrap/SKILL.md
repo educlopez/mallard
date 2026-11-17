@@ -12,7 +12,7 @@ description: >
   page, its description, or wants it to "look proper." Works both for brand-new
   projects (apply everything from minute 1) and for auditing/fixing an existing
   one.
-version: "0.2.0"
+version: "0.3.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -222,6 +222,15 @@ glab api "projects/$enc/repository/branches/<branch>" >/dev/null && echo exists
 # AGENTS.md and CI on the default branch
 for f in AGENTS.md .gitlab-ci.yml; do glab api "projects/$enc/repository/files/$f?ref=<default_branch>" >/dev/null 2>&1 && echo "$f yes" || echo "$f no"; done
 ```
+
+To run the whole set across many projects in one read-only pass (with back-off on HTTP 429, which a parallel loop of `glab api` calls hits quickly):
+
+```bash
+~/.claude/skills/gitlab-project-bootstrap/scripts/readiness-audit.py --namespace <group>/   # table
+~/.claude/skills/gitlab-project-bootstrap/scripts/readiness-audit.py --project <group>/<name> --json
+```
+
+It reports protection (and whether it is hollow), AGENTS.md and CLAUDE.md state, the CI file, whether a pipeline was ever created (a CI file made only of `.pre` jobs never runs), and which common paths `.gitignore` covers.
 
 Flag:
 - Default branch not in `protected_branches` (seen in practice: default `master`, only `main` protected).
