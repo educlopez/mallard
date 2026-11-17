@@ -13,3 +13,7 @@ deliberately out of scope).
 ## Explicitly NOT doing (changes the product)
 SDD workflow, Engram/persona injection, MCP server management, AI provider switcher /
 per-phase model assignment. These belong to a "configurator" product, not mallard.
+
+## Open
+
+- **`ci-templates` agent-guardrail: exclude the CI file by default.** The component flags the `.gitlab-ci.yml` that lists its own `forbidden-patterns`, and any doc that quotes them, so every project that sets the input has to add `.gitlab-ci.yml` to `exclude-paths` by hand (seen twice in one week). Fix in `educlopezcinetic/ci-templates`, then drop the workaround from `gitlab-ci-quality-gates`. Owner: the `ci-templates` repo, not mallard.

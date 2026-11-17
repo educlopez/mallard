@@ -141,6 +141,7 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `elementflow-kb` | Knowledge base for ElementFlow (Elementor-based builder, `stsitebuilder`) on PrestaShop |
 | `gitlab-changelog-release` | Generate CHANGELOG.md and cut a GitLab release by hand (git-cliff or GitLab Changelog API) |
 | `gitlab-ci-quality-gates` | Wire Cinetic CI components (lint, typecheck, tests, guardrails) and MR branch protection |
+| `agents-md-completeness` | Verification pass for an existing `AGENTS.md`: checks it against a six-section outline, auto-detects what the repo answers (committers, languages, custom code, cron, tests, recent fixes) and proposes only the missing lines; stack-aware (PrestaShop, Magento, Laravel, custom), every check optional |
 | `gitlab-project-bootstrap` | Set up or audit GitLab project metadata: avatar, description, topics, badges, README |
 | `gitlab-wiki-bootstrap` | Bootstrap or extend a team GitLab Wiki from the real codebase |
 | `lando-check` | Check local Lando is up and serving, start it, diagnose the usual failures |
