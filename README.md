@@ -173,6 +173,10 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `diagnose-bug` | Repeatable feedback loop to find the cause of a hard bug (PrestaShop, Laravel, JS) before fixing |
 | `task-review` | Review the branch diff against the Intervals brief and `AGENTS.md` before the MR |
 
+## Workflow
+
+How the skills chain on one task, from Intervals to the MR: see `docs/workflow.md`.
+
 ## Commands
 
 | Command | What |
@@ -240,7 +244,7 @@ claude/agents/                Claude subagents (symlinked to ~/.claude/agents/, 
 .goreleaser.yaml              Multi-platform build + brews/scoops publish
 install.sh                    Curl-pipe installer (downloads release binary)
 doctor.sh                     Bash dependency check (claude CLI, node, pnpm)
-docs/                         Notes on adding skills and commands
+docs/                         Notes on adding skills, rules and the task workflow
 ```
 
 ## Adding a skill
