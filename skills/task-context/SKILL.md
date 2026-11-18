@@ -14,7 +14,7 @@ description: >
   sentence ("imputar tiempo", "imputa horas", "mete 0:30 en cada una", "añade
   media hora a la tarea", "log time", "add time entry"): it logs billable by
   default (unless told otherwise) and always writes a description.
-version: "0.3.0"
+version: "0.4.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -42,6 +42,8 @@ If `summary` is empty AND notes are thin (< ~200 chars / no actionable detail), 
 ```
 ⚠ thin — no actionable detail in Intervals. Run  /task <localid> --enrich  to pull Gmail/Drive context.
 ```
+
+If the brief is thin or ambiguous, suggest the `grill` skill. Suggest only; do not start it.
 
 Do **not** search anything here. Enrich is explicit only.
 
