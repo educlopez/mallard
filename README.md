@@ -170,6 +170,8 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `no-comments` | Replace workaround comments in a diff with root-cause fixes |
 | `show-me-your-work` | TSV decision trail for long or unattended work |
 | `grill` | Decision-tree interview to stress-test a plan or estimate before starting |
+| `diagnose-bug` | Repeatable feedback loop to find the cause of a hard bug (PrestaShop, Laravel, JS) before fixing |
+| `task-review` | Review the branch diff against the Intervals brief and `AGENTS.md` before the MR |
 
 ## Commands
 

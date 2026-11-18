@@ -14,7 +14,7 @@ description: >
   sentence ("imputar tiempo", "imputa horas", "mete 0:30 en cada una", "añade
   media hora a la tarea", "log time", "add time entry"): it logs billable by
   default (unless told otherwise) and always writes a description.
-version: "0.4.0"
+version: "0.4.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -111,7 +111,7 @@ NEXT: <proposed first steps>
 
 ### 7. Route
 
-Name the matching skill/agent (step 4) and offer to hand off. For deterministic types (`translation`, `image`, `security`) you may proceed with the skill directly; for `layout`/`bug` draft and let the user review.
+Name the matching skill/agent (step 4) and offer to hand off. For deterministic types (`translation`, `image`, `security`) you may proceed with the skill directly; for `layout` draft and let the user review. For `bug`, offer `diagnose-bug`.
 
 ---
 

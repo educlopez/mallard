@@ -4,7 +4,7 @@ description: Classify an Intervals task into a work type so the /task flow can r
 tools: Read, Grep, Glob
 model: sonnet
 color: blue
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -35,7 +35,7 @@ Given an Intervals task's fields (title, summary, notes, module, client) you ret
 | `translation` | i18n, "traducir", untranslated/English strings, XLF | `ps-translate` skill |
 | `image` | product images, white zones, thumbnails, regenerate | `ps-image-regen` skill |
 | `layout` | Disseny/design module, CSS, header/footer/home/category/product-page, spacing, responsive | `layout-builder` agent |
-| `bug` | error, "no funciona", broken flow, stacktrace, regression | human-led (agent assists) |
+| `bug` | error, "no funciona", broken flow, stacktrace, regression | `diagnose-bug` skill (human-led) |
 | `security` | CVE, module advisory, Friends of Presta, scan | `ps-security-audit` skill |
 | `content` | copy/CMS text edits, banners, static blocks | semi-auto |
 | `unknown` | none of the above clearly applies | present brief, ask the user |
