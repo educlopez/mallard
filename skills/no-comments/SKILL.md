@@ -6,7 +6,7 @@ description: >
   explaining it. Use when the user says "limpia comentarios", "no-comments",
   "quita los hacks comentados", "hay muchos comentarios raros", or after a
   change that left workaround comments behind.
-version: "0.1.0"
+version: "0.2.0"
 metadata:
   author: Eduardo Calvo
 ---
@@ -25,11 +25,11 @@ The caller's files or the diff against the base branch (`main` or `master`), inc
    - **Describes what the code does:** delete only if the code is already clear.
    - **Explains a workaround or a surprise:** a flag. Find the root cause.
    - **States a constraint** ("do not remove", "talk to X first", vendor quirk, PrestaShop core behavior): keep, unless a type, test or lint can enforce it.
-   - **Lint or type suppression:** check it is still needed; correctness and safety suppressions stay.
+   - **Lint or type suppression** (`biome-ignore`, `eslint-disable`, `@ts-expect-error`, `@ts-ignore`): never delete or rewrite it, even when its reason looks stale. Report it as "possibly stale" with the evidence, and leave the decision to the user.
 2. For each flag, make the smallest root-cause fix in scope: delete the dead path, use the real API, drop the parameter. If the root cause is out of scope, make the smallest in-scope fix and report the rest as open.
 3. For each kept constraint, offer the cheapest in-scope enforcement (test, lint, check) and wait for the user's OK before adding it. If approved, encode, then delete the comment.
-4. Never delete a comment you were not asked to touch in files outside the diff. Never add a symptom guard.
+4. Never delete a comment you were not asked to touch in files outside the diff. Never add a symptom guard. Never change code to make a lint or type suppression unnecessary.
 
 ## Report
 
-Comments deleted, flags fixed (file, one line), constraints kept with reason, enforcement offers, open items.
+Comments deleted, flags fixed (file, one line), constraints kept with reason, suppressions that look stale (left untouched), enforcement offers, open items.
