@@ -16,7 +16,7 @@ description: >
   gitlab-security-setup (scheduled Trivy/pnpm supply-chain email report) and
   ps-security-audit — this is about MR-time quality/security GATES, not
   scheduled reports. Do NOT use for GitHub-hosted projects.
-version: "0.4.1"
+version: "0.4.2"
 metadata:
   author: Eduardo Calvo
 ---
@@ -116,7 +116,7 @@ building the habit. If that's too strict for how the user actually wants to
 work, use `40` (Maintainer) instead and say so explicitly — don't silently
 soften it.
 
-If the project follows Cinetic's Intervals-task branching model (task branch
+If the project follows the task-number branching model (task branch
 off `main`/`master`, merged to `test` first for pre-prod validation, then
 **the same task branch** — never `test` itself — merged to `main` once the
 client approves), the `workflow:` rules already cover both merge targets:

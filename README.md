@@ -135,7 +135,7 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `ps-watch` | BrowserSync live-reload watcher for Panda child theme development in Lando |
 | `panda-kb` | Knowledge base for the Panda theme by SunnyToo (st* modules, Easy Builder, demos) |
 | `prestashop-kb` | Knowledge base for the PrestaShop 8/9 platform (Symfony, Twig BO, Smarty, hooks, migration) |
-| `task-context` | Turn an Intervals task into a brief + git branch + route to the right skill; log time on finish (powers `/task`) |
+| `task-context` | Turn a tracker task into a brief + git branch + route to the right skill; log time on finish (powers `/task`). Tracker is set in `~/.config/mallard/tracker.md` (template: `skills/task-context/tracker.template.md`) |
 | `ps-project-doc` | Generate a lean, team-shared `AGENTS.md` (40-line target, 80 cap, only what code does not show) plus a one-line `CLAUDE.md` bridge; private notes go to gitignored `CLAUDE.local.md` |
 | `ps-new-project` | Scaffold a new PS client project: child theme (panda/elementflow) + CSS build + CLAUDE.md |
 | `elementflow-kb` | Knowledge base for ElementFlow (Elementor-based builder, `stsitebuilder`) on PrestaShop |
@@ -171,11 +171,11 @@ Windows: download the latest zip from [Releases](https://github.com/educlopez/ma
 | `show-me-your-work` | TSV decision trail for long or unattended work |
 | `grill` | Decision-tree interview to stress-test a plan or estimate before starting |
 | `diagnose-bug` | Repeatable feedback loop to find the cause of a hard bug (PrestaShop, Laravel, JS) before fixing |
-| `task-review` | Review the branch diff against the Intervals brief and `AGENTS.md` before the MR |
+| `task-review` | Review the branch diff against the task brief and `AGENTS.md` before the MR |
 
 ## Workflow
 
-How the skills chain on one task, from Intervals to the MR: see `docs/workflow.md`.
+How the skills chain on one task, from the task to the MR: see `docs/workflow.md`.
 
 ## Commands
 
@@ -186,7 +186,7 @@ How the skills chain on one task, from Intervals to the MR: see `docs/workflow.m
 | `/ps-url` | PrestaShop URL utilities |
 | `/panda` | Ask the `panda-expert` agent (Panda theme + Easy Builder + st* modules) |
 | `/ps` | Ask the `prestashop-expert` agent (PS 8/9 core: Symfony, Twig, Smarty, hooks, migration) |
-| `/task` | Turn an Intervals task into ready-to-work context (brief, branch, route, time logging) |
+| `/task` | Turn a tracker task into ready-to-work context (brief, branch, route, time logging) |
 | `/project-doc` | Generate a lean shared `AGENTS.md` for the current PS repo |
 | `/new-project` | Scaffold day-1 setup for a new PS project (child theme, CSS build, docs) |
 | `/sharpen` | Make a task deeper, not bigger, then rewrite the prompt |
@@ -201,7 +201,7 @@ CWD-first (inspect project source before relying on KB snapshots) and consult th
 |-------|--------|
 | `panda-expert` | Panda theme by SunnyToo, `st*` modules, Easy Builder, SunnyToo demos |
 | `prestashop-expert` | PrestaShop 8/9 core: themes, parent-child, Symfony BO, Twig, Smarty, hooks, modules, migration 8→9 |
-| `task-classifier` | Classify an Intervals task into a work type to route it (used by `/task`) |
+| `task-classifier` | Classify a tracker task into a work type to route it (used by `/task`) |
 | `layout-builder` | Implement storefront layout/CSS on a PS child theme (Panda or ElementFlow) |
 
 The knowledge base lives in-repo under `skills/panda-kb/references/` and

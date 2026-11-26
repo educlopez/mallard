@@ -5,14 +5,14 @@ description: >
   any work starts. Use when the user says "hazme preguntas", "grill", "revisemos
   el plan", "antes de empezar", "estima esta tarea", or when `/task` returns a
   thin or ambiguous brief.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
 
 # grill
 
-Adapted from Matt Pocock's `grilling` and `grill-me`. It interviews, it does not build: no file edits, no Intervals writes, nothing sent to a client. For questions only the client can answer, hand off to `client-questionnaire`.
+Adapted from Matt Pocock's `grilling` and `grill-me`. It interviews, it does not build: no file edits, no tracker writes, nothing sent to a client. For questions only the client can answer, hand off to `client-questionnaire`.
 
 ## 1. State the decision
 
@@ -48,4 +48,4 @@ Print decisions, assumptions, and the questions left for the client or PM. If an
 
 Next: `research-brief` for a fact you could not find, `client-questionnaire` for client-only questions, then the route that `/task` named.
 
-It does not start the work, log time or touch Intervals.
+It does not start the work, log time or touch the tracker.

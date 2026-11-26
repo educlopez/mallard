@@ -1,18 +1,18 @@
 ---
 name: task-review
 description: >
-  Review the branch diff against the Intervals task brief and the repo's
+  Review the branch diff against the task brief and the repo's
   AGENTS.md before opening the MR. Use when the user says "revisa mi diff",
   "task review", "revisa antes de la MR", "¿cumple la tarea?", or after
   finishing the work on a `/task` branch.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
 
 # task-review
 
-Adapted from Matt Pocock's `code-review`: two axes, reported separately. Its spec axis is the Intervals brief, not an issue tracker. Read-only: it never edits code, comments on the MR or touches Intervals.
+Adapted from Matt Pocock's `code-review`: two axes, reported separately. Its spec axis is the task brief, not an issue tracker. Read-only: it never edits code, comments on the MR or touches the tracker.
 
 ## 1. Fix the diff
 

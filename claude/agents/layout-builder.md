@@ -4,7 +4,7 @@ description: Implement storefront layout and CSS changes on a PrestaShop child t
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
 color: purple
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
@@ -16,9 +16,9 @@ The maquetación worker. Turns a `layout`-type task into concrete, reviewable th
 ## When to invoke
 
 <example>
-Context: /task classified #41953 (module "Disseny") as `layout`.
+Context: /task classified #41953 (design project) as `layout`.
 assistant: "Routing to layout-builder to draft the mobile fixes for review."
-<commentary>Design-module task → layout-builder drafts CSS/template changes; the user reviews in local before anything ships.</commentary>
+<commentary>Design task → layout-builder drafts CSS/template changes; the user reviews in local before anything ships.</commentary>
 </example>
 
 <example>

@@ -5,7 +5,7 @@
 # summary enters the model context — never raw email bodies.
 #
 # Usage: gmail_search.sh "<client>" "<pm-owner>" "<keywords>" [max]
-#   client   free-text client/company name (from the Intervals task `client`)
+#   client   free-text client/company name (from the tracker task `client`)
 #   pm-owner PM display name (from the task `owners`) — used as a soft from: hint
 #   keywords 2-4 salient words from the task title
 #   max      max messages to fetch (default 5)

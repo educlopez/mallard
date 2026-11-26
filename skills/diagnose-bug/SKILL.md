@@ -5,14 +5,14 @@ description: >
   touching the fix. Use when the user says "diagnostica", "depura esto", "por
   qué falla", "error 500", "no funciona", or when `/task` classifies a task as
   `bug`. Works on PrestaShop, Laravel and other PHP or JS projects.
-version: "0.1.0"
+version: "0.1.1"
 metadata:
   author: Eduardo Calvo
 ---
 
 # diagnose-bug
 
-Adapted from Matt Pocock's `diagnosing-bugs`. It finds the cause and the fix. It does not commit, deploy or write to Intervals.
+Adapted from Matt Pocock's `diagnosing-bugs`. It finds the cause and the fix. It does not commit, deploy or write to the tracker.
 
 ## 1. Pick the environment
 
