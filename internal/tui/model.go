@@ -714,7 +714,7 @@ func (m Model) viewDone() string {
 		b.WriteString("\n" + styleError.Render("  Errors:") + "\n")
 		for _, r := range m.results {
 			if r.Status == "error" || r.Status == "skipped" {
-				b.WriteString(styleMuted.Render(fmt.Sprintf("    [%s] %s/%s: %v\n", r.Agent, r.Agent, r.Skill, r.Err)))
+				b.WriteString(styleMuted.Render(fmt.Sprintf("    [%s] %s/%s: %v", r.Agent, r.Agent, r.Skill, r.Err)) + "\n")
 			}
 		}
 	}
