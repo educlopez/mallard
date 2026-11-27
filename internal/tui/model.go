@@ -616,10 +616,10 @@ func (m Model) View() string {
 
 func (m Model) viewAgents() string {
 	var b strings.Builder
-	b.WriteString(styleAccent.Render("  Detected agents\n\n"))
+	b.WriteString(styleAccent.Render("  Detected agents") + "\n\n")
 
 	if len(m.allAgents) == 0 {
-		b.WriteString(styleError.Render("  No agents detected. Install claude, codex, opencode, agents, gemini, cursor, or windsurf first.\n"))
+		b.WriteString(styleError.Render("  No agents detected. Install claude, codex, opencode, agents, gemini, cursor, or windsurf first.") + "\n")
 		return b.String()
 	}
 
@@ -643,7 +643,7 @@ func (m Model) viewAgents() string {
 
 func (m Model) viewSkills() string {
 	var b strings.Builder
-	b.WriteString(styleAccent.Render("  Select skills to install\n\n"))
+	b.WriteString(styleAccent.Render("  Select skills to install") + "\n\n")
 
 	for i, s := range m.allSkills {
 		checked := "[ ]"
@@ -660,14 +660,14 @@ func (m Model) viewSkills() string {
 	}
 
 	if len(m.allCommands) > 0 {
-		b.WriteString("\n" + styleAccent.Render("  Commands (always installed)\n"))
+		b.WriteString("\n" + styleAccent.Render("  Commands (always installed)") + "\n")
 		for _, c := range m.allCommands {
 			b.WriteString(styleMuted.Render(fmt.Sprintf("    • %s", c.Name)) + "\n")
 		}
 	}
 
 	if len(m.allAgentDefs) > 0 {
-		b.WriteString("\n" + styleAccent.Render("  Agents (always installed, Claude only)\n"))
+		b.WriteString("\n" + styleAccent.Render("  Agents (always installed, Claude only)") + "\n")
 		for _, ag := range m.allAgentDefs {
 			b.WriteString(styleMuted.Render(fmt.Sprintf("    • %s", ag.Name)) + "\n")
 		}
@@ -684,7 +684,7 @@ func (m Model) viewInstalling() string {
 
 func (m Model) viewDone() string {
 	var b strings.Builder
-	b.WriteString(styleSuccess.Render("  Installation complete!\n\n"))
+	b.WriteString(styleSuccess.Render("  Installation complete!") + "\n\n")
 
 	linked, already, skipped, errored := 0, 0, 0, 0
 	for _, r := range m.results {
@@ -711,7 +711,7 @@ func (m Model) viewDone() string {
 	b.WriteString(summary + "\n")
 
 	if errored > 0 {
-		b.WriteString("\n" + styleError.Render("  Errors:\n"))
+		b.WriteString("\n" + styleError.Render("  Errors:") + "\n")
 		for _, r := range m.results {
 			if r.Status == "error" || r.Status == "skipped" {
 				b.WriteString(styleMuted.Render(fmt.Sprintf("    [%s] %s/%s: %v\n", r.Agent, r.Agent, r.Skill, r.Err)))
@@ -734,8 +734,8 @@ func (m Model) viewUpdatePlanning() string {
 
 func (m Model) viewUpdateConfirm() string {
 	var b strings.Builder
-	b.WriteString(styleAccent.Render("  Review update plan\n"))
-	b.WriteString(styleMuted.Render("  Files marked replace will be backed up before being symlinked.\n"))
+	b.WriteString(styleAccent.Render("  Review update plan") + "\n")
+	b.WriteString(styleMuted.Render("  Files marked replace will be backed up before being symlinked.") + "\n")
 
 	rpt := m.updatePlan
 	totalNoop, totalUpdated, totalReplaced, totalMissing := 0, 0, 0, 0
@@ -772,8 +772,8 @@ func (m Model) viewUpdateConfirm() string {
 
 func (m Model) viewUpdateNoop() string {
 	var b strings.Builder
-	b.WriteString(styleSuccess.Render("  ✓  Already up to date.\n"))
-	b.WriteString(styleMuted.Render("  No symlinks needed to be refreshed or replaced.\n"))
+	b.WriteString(styleSuccess.Render("  ✓  Already up to date.") + "\n")
+	b.WriteString(styleMuted.Render("  No symlinks needed to be refreshed or replaced.") + "\n")
 	b.WriteString("\n" + styleKey.Render("  enter  back to menu"))
 	return b.String()
 }
@@ -804,11 +804,11 @@ func (m Model) viewUpdateDone() string {
 		return b.String()
 	}
 
-	b.WriteString(styleSuccess.Render("  ✓  Update complete!\n"))
+	b.WriteString(styleSuccess.Render("  ✓  Update complete!") + "\n")
 
 	rpt := m.updateReport
 	if rpt == nil || len(rpt.Agents) == 0 {
-		b.WriteString(styleMuted.Render("  No agents detected.\n"))
+		b.WriteString(styleMuted.Render("  No agents detected.") + "\n")
 		b.WriteString("\n" + styleKey.Render("  enter  back to menu  •  q  quit"))
 		return b.String()
 	}
@@ -859,7 +859,7 @@ const scrollViewportHeight = 16
 func (m Model) viewScrollReport() string {
 	var b strings.Builder
 
-	b.WriteString(styleAccent.Render("  " + m.scrollTitle) + "\n\n")
+	b.WriteString(styleAccent.Render("  "+m.scrollTitle) + "\n\n")
 
 	if m.scrollErr != nil {
 		b.WriteString(styleError.Render(fmt.Sprintf("  error: %v", m.scrollErr)) + "\n")
