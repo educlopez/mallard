@@ -1,21 +1,28 @@
 # Mallard
 
-Claude Code, Codex & OpenCode toolkit — skills, commands, and subagents,
-synced with one CLI. Built for the day-to-day work of PrestaShop
-development teams.
+One CLI that installs and keeps in sync the same skills, slash commands and
+subagents across Claude Code, Codex, OpenCode and Cursor. Built for the
+day-to-day work of PrestaShop development teams.
+
+![mallard installing skills, commands and subagents into Claude Code, Codex, OpenCode and Cursor](assets/demo.gif)
+
+**The problem:** every coding agent keeps its skills and commands in its own
+folder and format. Copying them by hand across agents and teammates' machines
+drifts within a week, and nobody knows which version anyone is running.
+
+- **One command, every agent.** `mallard update` detects Claude Code, Codex,
+  OpenCode, Cursor, Gemini CLI and Windsurf and installs into each.
+- **Symlinks, not copies.** Skills and commands link to one source, so an
+  update reaches every agent at once.
+- **Subagents in each agent's format.** Claude subagents are rendered for
+  Codex (TOML), OpenCode and Cursor.
+- **Safe updates.** Conflicting files are backed up before they are replaced;
+  `mallard update --restore <ts>` brings them back.
+- **Health checks.** `mallard doctor` reports broken or missing links per agent.
+- **PrestaShop toolkit included.** 40+ skills, commands and expert agents for
+  PrestaShop 8/9, the Panda theme and Lando.
 
 **[Website & docs → mallard.educalvolopez.com](https://mallard.educalvolopez.com)**
-
-## Related tools
-
-| Tool | What |
-|------|------|
-| [ps-lando](http://ps-lando.educalvolopez.com/) | CLI to scaffold a Lando environment with PrestaShop + Panda theme |
-
-> **Note**: the PrestaShop/Panda expert agents + knowledge base from
-> [prestashop-experts](https://github.com/educlopez/prestashop-experts) are also bundled
-> here — see the [Agents](#agents) section below. The standalone plugin stays available
-> for external/freelance use; mallard is the team distribution.
 
 ## Install
 
@@ -208,6 +215,17 @@ The knowledge base lives in-repo under `skills/panda-kb/references/` and
 `skills/prestashop-kb/references/` — that's the source of truth. Edit it directly; no
 external vault or per-machine setup is required to build or ship the KB.
 
+> **Note**: the PrestaShop/Panda expert agents + knowledge base from
+> [prestashop-experts](https://github.com/educlopez/prestashop-experts) are also bundled
+> here. The standalone plugin stays available for external/freelance use; mallard is the
+> team distribution.
+
+## Related tools
+
+| Tool | What |
+|------|------|
+| [ps-lando](http://ps-lando.educalvolopez.com/) | CLI to scaffold a Lando environment with PrestaShop + Panda theme |
+
 ## Structure
 
 ```
@@ -245,6 +263,7 @@ claude/agents/                Claude subagents (symlinked to ~/.claude/agents/, 
 install.sh                    Curl-pipe installer (downloads release binary)
 doctor.sh                     Bash dependency check (claude CLI, node, pnpm)
 docs/                         Notes on adding skills, rules and the task workflow
+assets/demo.tape               VHS script that records assets/demo.gif (`vhs assets/demo.tape`)
 ```
 
 ## Adding a skill
