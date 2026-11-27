@@ -1,6 +1,6 @@
 # Task workflow
 
-How the skills chain on one Intervals task. Each step is a skill the user starts, and each skill ends with a `Next:` line that points to the following one.
+How the skills chain on one tracker task. Each step is a skill the user starts, and each skill ends with a `Next:` line that points to the following one.
 
 Works on any stack mallard covers: PrestaShop, Laravel, plain PHP or JS. Stack-specific steps live inside each skill.
 
@@ -29,5 +29,5 @@ reflect                 turn the session's repeated mistakes into skill edits
 ## Rules for the chain
 
 - One owner per step. A skill that needs another loads it by name ("Follow `lando-setup`") and does not copy its text.
-- Every external action waits for the user: commit, push, MR, Intervals writes, client messages.
+- Every external action waits for the user: commit, push, MR, tracker writes, client messages.
 - A new skill that fits the chain gets a `Next:` line and a row here. Skills outside the chain (`ps-*` tools, bootstrap skills) are not listed.
